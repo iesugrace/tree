@@ -16,13 +16,13 @@ class NotChildException(Exception): pass
 class Node:
     """ A tree element
     """
-    parentNode = None
-    isBranch   = False
+    parent   = None
+    isBranch = False
 
     def __init__(self, name):
         self.name = name
 
-    def setParent(self, parent):
+    def setParent(self, newParent):
         """ Set the provided parent as the node's parent.
         Raise an exception if the parent is not a branch.
         """
