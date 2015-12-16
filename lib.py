@@ -50,9 +50,12 @@ class Branch(Node):
 
     def attachChild(self, node):
         """ Attach the given node to the branch if the node does not belong
-        to any branch. Raise exception if node doesn't exist, or it belongs
-        to a branch already.
+        to any branch. Raise exception if the node belongs to a branch already.
         """
+        if node.parent is not None:
+            raise NodeTakenException
+        self.childNodes.append(node)
+        node.parent = self
 
     def detachChild(self, node):
         """ detach the given node from the branch.  Raise an exception
