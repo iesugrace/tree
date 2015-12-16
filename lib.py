@@ -47,6 +47,7 @@ class Branch(Node):
     def hasChild(self):
         """ Return true if there is any node directly under the branch.
         """
+        return len(self.childNodes) > 0
 
     def attachChild(self, node):
         """ Attach the given node to the branch if the node does not belong
