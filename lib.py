@@ -62,6 +62,13 @@ class Branch(Node):
         if node doesn't exist, or it doesn't belong to the branch.
         """
 
+    def clearChildNodes(self):
+        """ Clear all child nodes.
+        """
+        for child in self.childNodes:
+            child.parent = None
+            self.childNodes.remove(child)
+
     def leaves(self):
         """ Return a list of all leaves under the branch or its sub-trees.
         """
