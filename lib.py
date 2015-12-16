@@ -1,3 +1,10 @@
+"""
+Author: Joshua Chen
+Date: 2015-12-16
+Location: Shenzhen
+Desc: Library for tree related works
+
+"""
 class Node:
     """ A tree element
     """
