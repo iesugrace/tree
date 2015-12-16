@@ -26,6 +26,11 @@ class Node:
         """ Set the provided parent as the node's parent.
         Raise an exception if the parent is not a branch.
         """
+        if not isinstance(newParent, Branch):
+            raise NotBranchException
+        if self.parent:
+            self.parent.clearChildNodes()
+        newParent.attachChild(self)
 
 Leaf = Node
 
