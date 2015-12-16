@@ -132,6 +132,6 @@ class TreeGroup:
         raise "sub class shall implement the load method"
 
     def save(self, dbFile):
-        """ save the group data to a database file
+        """ Save the group data to a database file. Implemented by sub-class.
         """
         raise "sub class shall implement the save method"
