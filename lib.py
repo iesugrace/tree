@@ -43,6 +43,15 @@ class Branch(Node):
     def hasLeaf(self):
         """ Return true if there is any leaf reachable from the branch down.
         """
+        def searchBranch(node):
+            for child in node.selfNodes:
+                if child.__class__ is Leaf:
+                    return True
+                elif child.__class__ is Branch:
+                    if searchBranch(child):
+                        return True
+            return False
+        return searchBranch(self)
 
     def hasChild(self):
         """ Return true if there is any node directly under the branch.
