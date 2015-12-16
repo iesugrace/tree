@@ -5,6 +5,14 @@ Location: Shenzhen
 Desc: Library for tree related works
 
 """
+import Exception
+
+class NotBranchException(Exception): pass
+class NodeExistsException(Exception): pass
+class NodeNotExistsException(Exception): pass
+class NodeTakenException(Exception): pass
+class NotChildException(Exception): pass
+
 class Node:
     """ A tree element
     """
