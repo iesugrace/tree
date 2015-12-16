@@ -16,7 +16,7 @@ class Node:
 
     def setParent(self, parent):
         """ Set the provided parent as the node's parent.
-        Raise an exception if the parent is not a branch or not exists.
+        Raise an exception if the parent is not a branch.
         """
 
 Leaf = Node
