@@ -109,6 +109,8 @@ class TreeGroup:
             self.data[node] = None
 
     def defaultValidator(self, node, group):
+        """ Default validator, ensure all nodes in the group are unique.
+        """
         if node not in group:
             return True
         else:
