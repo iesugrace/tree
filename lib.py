@@ -99,6 +99,14 @@ class Branch(Node):
     def leaves(self):
         """ Return a list of all leaves under the branch or its sub-trees.
         """
+        class c(Collector):
+            def __init__(self):
+                self.result = []
+            def process(self, node):
+                if node.__class__ is Leaf:
+                    self.result.append(node)
+
+        return self.walkTree(self, c()).result
 
     def contains(self, leaf):
         """ Return True if the leaf can be reached from the branch.
