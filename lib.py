@@ -80,8 +80,7 @@ class Branch(Node):
         """ Clear all child nodes.
         """
         for child in self.childNodes:
-            child.parent = None
-            self.childNodes.remove(child)
+            self.detachChild(child, sure=True)
 
     def leaves(self):
         """ Return a list of all leaves under the branch or its sub-trees.
