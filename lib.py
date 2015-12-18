@@ -40,6 +40,20 @@ class Branch(Node):
     """
     childNodes = []
 
+    def walkTree(self, branch, collector):
+        """ Walk the tree from the branch 'branch' down,
+        process the nodes, return the result object
+        """
+        for child in branch.selfNodes:
+            collector.process(child)
+            if collector.done:
+                break
+            if child.__class__ is Branch:
+                res = self.walkTree(child, collector):
+                if collector.done:
+                    break
+        return collector
+
     def hasLeaf(self):
         """ Return true if there is any leaf reachable from the branch down.
         """
@@ -140,3 +154,12 @@ class TreeGroup:
         """ Save the group data to a database file. Implemented by sub-class.
         """
         raise "sub class shall implement the save method"
+
+
+
+class Collector:
+    """ Record and return information
+    """
+    done   = False
+    def process(self, obj):
+        raise "sub class shall implement the process method"
