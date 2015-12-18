@@ -67,10 +67,14 @@ class Branch(Node):
         self.childNodes.append(node)
         node.parent = self
 
-    def detachChild(self, node):
-        """ detach the given node from the branch.  Raise an exception
-        if node doesn't exist, or it doesn't belong to the branch.
+    def detachChild(self, node, sure=False):
+        """ detach the given node from the branch. Raise an exception
+        if node doesn't belong to the branch.
         """
+        if not sure and node not in self.childNodes:
+            raise NotChildException
+        node.parent = None
+        self.childNodes.remove(node)
 
     def clearChildNodes(self):
         """ Clear all child nodes.
