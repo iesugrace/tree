@@ -108,9 +108,20 @@ class Branch(Node):
 
         return self.walkTree(self, c()).result
 
-    def contains(self, leaf):
-        """ Return True if the leaf can be reached from the branch.
+    def covers(self, node):
+        """ Return True if the node is reachable from the branch.
+        In here, 'covered' means reachable, sub-classes may extend
+        it to mean more.
         """
+        class c(Collector):
+            def __init__(self):
+                self.result = False
+            def process(self, inNode):
+                if inNode is node:
+                    self.result = True
+                    self.done   = True
+
+        return self.walkTree(self, c()).result
 
 
 class TreeGroup:
