@@ -8,6 +8,10 @@ to maintain an ACL database.
 """
 from lib import Leaf, Branch, TreeGroup
 
+class Acl(Branch):
+    """ Represents an ACL. An ACL contains one or more networks.
+    """
+
 class AclGroup(TreeGroup):
     """ All nodes in the group are unique in name, all networks
     in the acl are of Leaf type. A single network can overlap another
