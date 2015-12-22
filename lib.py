@@ -5,8 +5,6 @@ Location: Shenzhen
 Desc: Library for tree related works
 
 """
-import Exception
-
 class NotBranchException(Exception): pass
 class NodeExistsException(Exception): pass
 class NodeNotExistsException(Exception): pass
@@ -49,7 +47,7 @@ class Branch(Node):
             if collector.done:
                 break
             if child.__class__ is Branch:
-                res = self.walkTree(child, collector):
+                res = self.walkTree(child, collector)
                 if collector.done:
                     break
         return collector
