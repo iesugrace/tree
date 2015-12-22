@@ -7,6 +7,44 @@ to maintain an ACL database.
 
 """
 from lib import Leaf, Branch, TreeGroup
+import re
+
+class Network:
+    """ Represents an IPv4 network
+    """
+    def __init__(self, net):
+        net_pattern  = '^([0-9]+\.){3}[0-9]+/[0-9]+$'
+        host_pattern = '^([0-9]+\.){3}[0-9]+$'
+        if re.match(host_pattern, net):
+            net = '%s/32' % net
+        elif not re.match(net_pattern, net):
+            raise Exception("unrecognized network: %s" % net)
+        self.parseNetwork(net)
+
+    def parseNetwork(self, net):
+        """ Parse the given network, convert the 'net' to the actual network
+        id thus 192.168.1.3/24 will be converted to 192.168.1.0/24, store
+        the string representation of the network, and the integer form of the
+        first ip and the last ip.
+        """
+        parts      = net.split('/')
+        numbers    = parts[0].split('.')
+        binNumbers = ['%08d' % int(bin(int(n))[2:]) for n in numbers]
+        binNumStr  = ''.join(binNumbers)
+        maskLen    = int(parts[1])
+        netPartStr = binNumStr[:maskLen]
+        padCount   = 32 - maskLen
+        firstIpBin = netPartStr + '0' * padCount
+        lastIpBin  = netPartStr + '1' * padCount
+        self.firstInt = int(firstIpBin, base=2)
+        self.lastInt  = int(lastIpBin, base=2)
+        netIdStr = firstIpBin
+        netIdEle = []
+        while netIdStr:
+            s, netIdStr = netIdStr[:8], netIdStr[8:]
+            netIdEle.append(str(int(s, base=2)))
+        self.net = '%s/%s' % ('.'.join(netIdEle), maskLen)
+
 
 class Acl(Branch):
     """ Represents an ACL. An ACL contains one or more networks.
