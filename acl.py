@@ -12,6 +12,11 @@ import re
 class Network:
     """ Represents an IPv4 network
     """
+    LESS        = -1
+    EQUAL       = 0
+    GREATER     = 1
+    NOCOMMON    = 2
+
     def __init__(self, net):
         net_pattern  = '^([0-9]+\.){3}[0-9]+/[0-9]+$'
         host_pattern = '^([0-9]+\.){3}[0-9]+$'
@@ -44,6 +49,21 @@ class Network:
             s, netIdStr = netIdStr[:8], netIdStr[8:]
             netIdEle.append(str(int(s, base=2)))
         self.net = '%s/%s' % ('.'.join(netIdEle), maskLen)
+
+    def compare(self, net):
+        """ Compare self with the given network, return
+        Network.LESS if self is covered by the net
+        Network.GREATER if self covers the net
+        Network.EQUAL if the two are the same
+        Network.NOCOMMON if the two has no common portion
+        """
+        if self.firstInt == net.firstInt and self.lastInt == net.lastInt:
+            return Network.EQUAL
+        if self.firstInt >= net.firstInt and self.lastInt <= net.lastInt:
+            return Network.LESS
+        if self.firstInt <= net.firstInt and self.lastInt >= net.lastInt:
+            return Network.GREATER
+        return Network.NOCOMMON
 
 
 class Acl(Branch):
