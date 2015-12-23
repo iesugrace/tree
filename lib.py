@@ -145,13 +145,14 @@ class TreeGroup:
             validator = self.defaultValidator
             vpargs    = (self.data,)
             vkargs    = {}
-        if validator(node, *vpargs, **vkargs):
-            self.data[node] = None
+        validator(node, *vpargs, **vkargs)  # may raise an exception
+        self.data[node.name] = node
+        return True
 
     def defaultValidator(self, node, group):
         """ Default validator, ensure all nodes in the group are unique.
         """
-        if node not in group:
+        if node.name not in group:
             return True
         else:
             raise NodeExistsException
@@ -170,8 +171,10 @@ class TreeGroup:
         and exception if either the node or parent does not exist, or the
         parent is not a branch.
         """
-        if node not in self.data or parent not in self.data:
-            raise NodeNotExistsException
+        if node.name not in self.data:
+            raise NodeNotExistsException('%s not exists' % node.name)
+        if parent.name not in self.data:
+            raise NodeNotExistsException('%s not exists' % parent.name)
         if not isinstance(parent, Branch):
             raise NotBranchException
         if node.parent is None:
