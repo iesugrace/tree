@@ -76,14 +76,20 @@ class Acl(Branch):
         """
         networks = self.leaves()
         nonredundant_nets = []
+        reduced_networks = networks[:]
         for net1 in networks:
-            networks.pop(0)
-            for net2 in networks:
+            # net1 may be removed from the reduced_networks in
+            # the previous iteration, shall not process it again
+            if net1 not in reduced_networks: continue
+
+            reduced_networks.pop(0)
+            inner_networks = reduced_networks[:]
+            for net2 in inner_networks:
                 r = net1.compare(net2)
-                if r != Network.NOCOMMON:
-                    networks.remove(net2)
-                if r == Network.LESS:
+                if r == Network.LESS:       # keep the greater
                     net1 = net2
+                if r != Network.NOCOMMON:   # remove the processed
+                    reduced_networks.remove(net2)
             nonredundant_nets.append(net1)
         return nonredundant_nets
 
