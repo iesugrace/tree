@@ -27,6 +27,9 @@ class Network:
             raise Exception("unrecognized network: %s" % net)
         self.parseNetwork(net)
 
+    def __repr__(self):
+        return self.name
+
     def parseNetwork(self, net):
         """ Parse the given network, convert the 'net' to the actual network
         id thus 192.168.1.3/24 will be converted to 192.168.1.0/24, store

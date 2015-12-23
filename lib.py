@@ -20,6 +20,9 @@ class Node:
     def __init__(self, name):
         self.name = name
 
+    def __repr__(self):
+        return self.name
+
     def setParent(self, newParent):
         """ Set the provided parent as the node's parent.
         Raise an exception if the parent is not a branch.
