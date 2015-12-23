@@ -51,7 +51,7 @@ class Branch(Node):
             collector.process(child)
             if collector.done:
                 break
-            if child.__class__ is Branch:
+            if isinstance(child, Branch):
                 res = self.walkTree(child, collector)
                 if collector.done:
                     break
