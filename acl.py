@@ -9,7 +9,7 @@ to maintain an ACL database.
 from lib import Leaf, Branch, TreeGroup
 import re
 
-class Network:
+class Network(Leaf):
     """ Represents an IPv4 network
     """
     LESS        = -1
@@ -17,25 +17,23 @@ class Network:
     GREATER     = 1
     NOCOMMON    = 2
 
-    def __init__(self, leaf):
+    def __init__(self, name):
+        Leaf.__init__(self, name)
         net_pattern  = '^([0-9]+\.){3}[0-9]+/[0-9]+$'
         host_pattern = '^([0-9]+\.){3}[0-9]+$'
-        net          = leaf.name
-        if re.match(host_pattern, net):
-            net = '%s/32' % net
-        elif not re.match(net_pattern, net):
-            raise Exception("unrecognized network: %s" % net)
-        self.parseNetwork(net)
+        if re.match(host_pattern, name):
+            name = '%s/32' % name
+        elif not re.match(net_pattern, name):
+            raise Exception("unrecognized network: %s" % name)
+        self.parseNetwork()
 
-    def __repr__(self):
-        return self.name
-
-    def parseNetwork(self, net):
+    def parseNetwork(self):
         """ Parse the given network, convert the 'net' to the actual network
         id thus 192.168.1.3/24 will be converted to 192.168.1.0/24, store
         the string representation of the network, and the integer form of the
         first ip and the last ip.
         """
+        net        = self.name
         parts      = net.split('/')
         numbers    = parts[0].split('.')
         binNumbers = ['%08d' % int(bin(int(n))[2:]) for n in numbers]
@@ -76,8 +74,7 @@ class Acl(Branch):
     def networks(self):
         """ Return a non-redundant list of networks of the ACL.
         """
-        leaves = self.leaves()
-        networks = [Network(leaf) for leaf in leaves]
+        networks = self.leaves()
         nonredundant_nets = []
         for net1 in networks:
             networks.pop(0)

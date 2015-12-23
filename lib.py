@@ -33,7 +33,8 @@ class Node:
             self.parent.clearChildNodes()
         newParent.attachChild(self)
 
-Leaf = Node
+
+class Leaf(Node): pass
 
 
 class Branch(Node):
@@ -106,7 +107,7 @@ class Branch(Node):
             def __init__(self):
                 self.result = []
             def process(self, node):
-                if node.__class__ is Leaf:
+                if isinstance(node, Leaf):
                     self.result.append(node)
 
         return self.walkTree(self, c()).result
