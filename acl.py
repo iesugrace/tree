@@ -17,9 +17,10 @@ class Network:
     GREATER     = 1
     NOCOMMON    = 2
 
-    def __init__(self, net):
+    def __init__(self, leaf):
         net_pattern  = '^([0-9]+\.){3}[0-9]+/[0-9]+$'
         host_pattern = '^([0-9]+\.){3}[0-9]+$'
+        net          = leaf.name
         if re.match(host_pattern, net):
             net = '%s/32' % net
         elif not re.match(net_pattern, net):
