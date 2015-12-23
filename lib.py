@@ -39,7 +39,9 @@ Leaf = Node
 class Branch(Node):
     """ A tree element, of container type, consists of other branches or leaves.
     """
-    childNodes = []
+    def __init__(self, *pargs, **kargs):
+        self.childNodes = []
+        Node.__init__(self, *pargs, **kargs)
 
     def walkTree(self, branch, collector):
         """ Walk the tree from the branch 'branch' down,
