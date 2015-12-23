@@ -49,7 +49,7 @@ class Network:
         while netIdStr:
             s, netIdStr = netIdStr[:8], netIdStr[8:]
             netIdEle.append(str(int(s, base=2)))
-        self.net = '%s/%s' % ('.'.join(netIdEle), maskLen)
+        self.name = '%s/%s' % ('.'.join(netIdEle), maskLen)
 
     def compare(self, net):
         """ Compare self with the given network, return
