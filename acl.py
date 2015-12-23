@@ -73,6 +73,23 @@ class Network:
 class Acl(Branch):
     """ Represents an ACL. An ACL contains one or more networks.
     """
+    def networks(self):
+        """ Return a non-redundant list of networks of the ACL.
+        """
+        leaves = self.leaves()
+        networks = [Network(leaf) for leaf in leaves]
+        nonredundant_nets = []
+        for net1 in networks:
+            networks.pop(0)
+            for net2 in networks:
+                r = net1.compare(net2)
+                if r != Network.NOCOMMON:
+                    networks.remove(net2)
+                if r == Network.LESS:
+                    net1 = net2
+            nonredundant_nets.append(net1)
+        return nonredundant_nets
+
 
 class AclGroup(TreeGroup):
     """ All nodes in the group are unique in name, all networks
