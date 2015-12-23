@@ -170,6 +170,15 @@ class TreeGroup:
         and exception if either the node or parent does not exist, or the
         parent is not a branch.
         """
+        if node not in self.data or parent not in self.data:
+            raise NodeNotExistsException
+        if not isinstance(parent, Branch):
+            raise NotBranchException
+        if node.parent is None:
+            parent.attachChild(node)
+        elif node.parent is not parent:
+            node.parent.detachChild(node, sure=True)
+            parent.attachChild(node)
 
     def load(self, dbFile, parser):
         """ Load data from a database, the existing data of the group will
