@@ -95,30 +95,31 @@ class Acl(Branch):
 
 
 class AclGroup(TreeGroup):
-    """ All nodes in the group are unique in name, all networks
-    in the acl are of Leaf type. A single network can overlap another
-    network, like 7.7.0.0/16 overlaps 7.7.7.0/24. An acl likewise,
-    can overlap another acl, provided that it meets this condition:
-    if a network of the first acl covers a network of the other acl,
-    then no network of the first acl shall be covered by any network
-    of the second acl.
+    """ All nodes in the group are unique in name. A single network
+    can overlap another network inside an Acl, like 7.7.0.0/16 overlaps
+    7.7.7.0/24, but this kind of overlap will be reduced by the Acl
+    class's networks method. An acl likewise, can overlap another acl
+    inside an Acl group, provided that it meets this condition:
+    If acl1.net1.compare(acl2.net1) yields a GREATER result, then all of
+    the networks in acl1 shall not be LESS than any networks in acl2.
+    for instance:
 
-    This pair is GOOD:
-        aclA {192.168.1.0/24; 10.1.0.0/16;}
-        aclB {192.168.0.0/16}
+        These two can coexist:
+            aclA {192.168.1.0/24; 10.1.0.0/16;}
+            aclB {192.168.0.0/16}
 
-    This pair is GOOD:
-        aclA {192.168.1.0/24; 10.1.0.0/16;}
-        aclB {192.168.0.0/16; 172.16.1.0/24}
+        These two can coexist:
+            aclA {192.168.1.0/24; 10.1.0.0/16;}
+            aclB {192.168.0.0/16; 172.16.1.0/24}
 
-    This pair is BAD:
-        aclA {192.168.1.0/24; 10.1.0.0/16;}
-        aclB {192.168.0.0/16; 10.1.1.0/24;}
+        These two can NOT coexist:
+            aclA {192.168.1.0/24; 10.1.0.0/16;}
+            aclB {192.168.0.0/16; 10.1.1.0/24;}
 
     Enforcing this overlaping rule is for avoiding the interleaving
-    network reference in the DNS view config. To not violating this
-    rule, in the view config, one view shall reference at most one acl
-    thus give a chance for this class to validate the ACLs.
+    network reference in the DNS view config. To not violate this rule,
+    in the view config, one view shall reference at most one acl thus
+    give a chance for this class to validate the ACLs.
     """
 
     def load(self, dbFile, parser):
