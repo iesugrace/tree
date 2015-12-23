@@ -6,7 +6,7 @@ Desc: Application that makes use of the tree library
 to maintain an ACL database.
 
 """
-from lib import Leaf, Branch, TreeGroup
+from lib import *
 import re
 
 class Network(Leaf):
@@ -24,7 +24,7 @@ class Network(Leaf):
         if re.match(host_pattern, name):
             name = '%s/32' % name
         elif not re.match(net_pattern, name):
-            raise Exception("unrecognized network: %s" % name)
+            raise InvalidNetworkException("unrecognized network: %s" % name)
         self.parseNetwork()
 
     def parseNetwork(self):

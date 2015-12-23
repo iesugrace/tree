@@ -10,6 +10,7 @@ class NodeExistsException(Exception): pass
 class NodeNotExistsException(Exception): pass
 class NodeTakenException(Exception): pass
 class NotChildException(Exception): pass
+class InvalidNetworkException(Exception): pass
 
 class Node:
     """ A tree element
@@ -28,7 +29,7 @@ class Node:
         Raise an exception if the parent is not a branch.
         """
         if newParent.__class__ is not Branch:
-            raise NotBranchException
+            raise NotBranchException('%s is not a branch' % newParent.name)
         if self.parent:
             self.parent.clearChildNodes()
         newParent.attachChild(self)
@@ -81,7 +82,7 @@ class Branch(Node):
         to any branch. Raise exception if the node belongs to a branch already.
         """
         if node.parent is not None:
-            raise NodeTakenException
+            raise NodeTakenException('%s is taken' % node.name)
         self.childNodes.append(node)
         node.parent = self
 
@@ -90,7 +91,7 @@ class Branch(Node):
         if node doesn't belong to the branch.
         """
         if not sure and node not in self.childNodes:
-            raise NotChildException
+            raise NotChildException('%s is not a child' % node.name)
         node.parent = None
         self.childNodes.remove(node)
 
@@ -155,7 +156,7 @@ class TreeGroup:
         if node.name not in group:
             return True
         else:
-            raise NodeExistsException
+            raise NodeExistsException('%s exists' % node.name)
 
     def deleteNode(self, node):
         """ Delete the provided node from the group, a KeyError
@@ -176,7 +177,7 @@ class TreeGroup:
         if parent.name not in self.data:
             raise NodeNotExistsException('%s not exists' % parent.name)
         if not isinstance(parent, Branch):
-            raise NotBranchException
+            raise NotBranchException('%s is not a branch' % parent.name)
         if node.parent is None:
             parent.attachChild(node)
         elif node.parent is not parent:
