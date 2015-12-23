@@ -45,7 +45,7 @@ class Branch(Node):
         """ Walk the tree from the branch 'branch' down,
         process the nodes, return the result object
         """
-        for child in branch.selfNodes:
+        for child in branch.childNodes:
             collector.process(child)
             if collector.done:
                 break
