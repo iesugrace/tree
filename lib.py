@@ -157,9 +157,13 @@ class TreeGroup:
             raise NodeExistsException
 
     def deleteNode(self, node):
-        """ Delete the provided node from the group, raise an exception
-        if the node is not found in the group.
+        """ Delete the provided node from the group, a KeyError
+        exception will be raised if the node is not found in the group.
+        Update the node's parent if it has one.
         """
+        if node.parent is not None:
+            node.parent.detachChild(node, sure=True)
+        self.data.pop(node.name)
 
     def moveNode(self, node, parent):
         """ Move the provided node and put it under the new parent, raise
