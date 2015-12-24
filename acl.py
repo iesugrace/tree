@@ -122,11 +122,34 @@ class AclGroup(TreeGroup):
     give a chance for this class to validate the ACLs.
     """
 
-    def load(self, dbFile, parser):
-        """ Load data from a database, the existing data of the group will
-        be abandoned.
+    def load(self, dbFile):
+        """ Load data from a database, the existing data of the group
+        will be abandoned. Add in this manner: for each ACL, add all
+        its networks to the group, and link all its networks with it,
+        then add the ACL itself to the group. Exception may raised by
+        Network class or Branch.addNode method during processing.
+
+        Sample ACL database format:
+            acl "ACL_NAME" {
+                ecs 114.213.144.0/20;
+                ecs 114.213.160.0/19;
+            };
         """
-        # parse the acl database
+        self.data = {}
+        raw_code = open(dbFile, 'rb').read()
+        acl_code_list = raw_code.split(b'acl')
+        acl_code_list = [x for x in acl_code_list if x]
+        for acl_code in acl_code_list:
+            acl_code  = acl_code.strip()
+            acl_parts = acl_code.split(b'\n')
+            acl_name  = acl_parts[0].split(b'"')[1]
+            acl       = Acl(acl_name)
+            for network_code in acl_parts[1:-1]:
+                network_name = network_code.split(b';')[0].split()[-1]
+                network = Network(network_name.decode())
+                self.addNode(network)   # use default validator
+                acl.attachChild(network)
+            self.addNode(acl, self.aclValidator, (self.data,))
 
     def save(self, dbFile):
         """ Save the group data to a database file.
