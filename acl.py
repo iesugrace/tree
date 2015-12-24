@@ -133,11 +133,32 @@ class AclGroup(TreeGroup):
         """
         # write to the acl database
 
-    def defaultValidator(self, node, group):
-        """ Add network range check, ensure no-overlap for all networks.
+    def aclValidator(self, new_acl, group):
+        """ Check if the introduction of the node cause a violation of
+        the AclGroup's Acl rule
         """
-        if TreeGroup.defaultValidator(node, group):
-            # check network range
-            ...
-        else:
-            return False
+        TreeGroup.defaultValidator(node, group) # ensure uniqe
+        for old_acl in group.values():
+            if not self.coexist(new_acl, old_acl):
+                raise NotCoexistsException('%s with %s' % (new_acl.name, old_acl.name))
+        return True
+
+    def coexist(self, acl1, acl2):
+        """ Check if acl1 can coexist with acl2 in the same group.
+        The rule is: if acl1.net1.compare(acl2.net1) yields a GREATER
+        result, then all of the networks in acl1 shall not be LESS
+        than any networks in acl2.
+        """
+        bad_relation = None
+        networks1    = acl1.networks()
+        networks2    = acl2.networks()
+        for net1 in networks1:
+            for net2 in networks2:
+                r = net1.compare(net2)
+                if r == bad_relation:
+                    return False
+                if r == Network.GREATER:
+                    bad_relation = Network.LESS
+                elif r == Network.LESS:
+                    bad_relation = Network.GREATER
+        return True

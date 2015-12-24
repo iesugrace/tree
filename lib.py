@@ -11,6 +11,7 @@ class NodeNotExistsException(Exception): pass
 class NodeTakenException(Exception): pass
 class NotChildException(Exception): pass
 class InvalidNetworkException(Exception): pass
+class NotCoexistsException(Exception): pass
 
 class Node:
     """ A tree element
