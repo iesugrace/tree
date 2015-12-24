@@ -157,7 +157,7 @@ class TreeGroup:
         if node.name not in group:
             return True
         else:
-            raise NodeExistsException('%s exists' % node.name)
+            raise NodeExistsException(group[node.name])
 
     def deleteNode(self, node):
         """ Delete the provided node from the group, a KeyError

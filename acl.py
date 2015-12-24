@@ -8,7 +8,19 @@ to maintain an ACL database.
 """
 from lib import *
 import re
+import sys
 
+# decorator function
+def addMoreInfo(c):
+    class X(c):
+        def __init__(self, *pargs, lineNumber=0, code=None, **kargs):
+            c.__init__(self, *pargs, **kargs)
+            self.lineNumber = lineNumber
+            self.code       = code
+    return X
+
+
+@addMoreInfo
 class Network(Leaf):
     """ Represents an IPv4 network
     """
@@ -68,6 +80,7 @@ class Network(Leaf):
         return Network.NOCOMMON
 
 
+@addMoreInfo
 class Acl(Branch):
     """ Represents an ACL. An ACL contains one or more networks.
     """
@@ -130,26 +143,82 @@ class AclGroup(TreeGroup):
         Network class or Branch.addNode method during processing.
 
         Sample ACL database format:
+            # comment
             acl "ACL_NAME" {
                 ecs 114.213.144.0/20;
                 ecs 114.213.160.0/19;
             };
+
+        A line starts with # is a comment, will be ignored, a line
+        contains 'acl' is the start of an acl definition, a network
+        definition is of form 0.0.0.0/0, other lines will be ignored.
         """
         self.data = {}
-        raw_code = open(dbFile, 'rb').read()
-        acl_code_list = raw_code.split(b'acl')
-        acl_code_list = [x for x in acl_code_list if x]
-        for acl_code in acl_code_list:
-            acl_code  = acl_code.strip()
-            acl_parts = acl_code.split(b'\n')
-            acl_name  = acl_parts[0].split(b'"')[1]
-            acl       = Acl(acl_name)
-            for network_code in acl_parts[1:-1]:
-                network_name = network_code.split(b';')[0].split()[-1]
-                network = Network(network_name.decode())
-                self.addNode(network)   # use default validator
-                acl.attachChild(network)
+        lines = open(dbFile, 'rb').readlines()
+        acl = None
+        for num, line in enumerate(lines, 1):
+            if re.search(b'^\s*#', line):   # ignore comment
+                continue
+            elif b'acl' in line:            # acl line
+                if acl:
+                    self.addAcl(acl)
+                acl_name  = line.split(b'"')[1].decode()
+                acl       = Acl(acl_name, lineNumber=num)
+            else:   # network line
+                match = re.search(b'([0-9]+\.){3}[0-9]+/[0-9]+', line)
+                if match:
+                    net_name = match.group(0).decode()
+                    net      = Network(net_name, lineNumber=num, code=net_name)
+                    if self.addNetwork(net):
+                        acl.attachChild(net)
+        if acl:
+            self.addAcl(acl)
+
+    def addNetwork(self, net):
+        """ Add the network to the group
+        """
+        try:
+            self.addNode(net)   # use default validator
+        except NodeExistsException as e:
+            old_net  = e.args[0]
+            old_info = '%s:%s' % (old_net.lineNumber, old_net.code)
+            new_info = '%s:%s' % (net.lineNumber, net.code)
+            msg      = 'duplicate net: %s <%s, %s>' % (net.name, old_info, new_info)
+            print(msg, file=sys.stderr)
+            return False
+        else:
+            return True
+
+    def addAcl(self, acl):
+        """ Add the acl to the group
+        """
+        try:
             self.addNode(acl, self.aclValidator, (self.data,))
+        except NodeExistsException as e:
+            obj  = e.args[0]
+            offended_info = '%s:%s' % (obj.lineNumber, obj.name)
+            print('duplicate acl: %s, %s:%s' %
+                    (offended_info, acl.lineNumber, acl.name), file=sys.stderr)
+        except NotCoexistsException as e:
+            old_acl  = e.args[0]
+            pairs    = e.args[1]
+            new_net1 = pairs[0][0]
+            new_net2 = pairs[1][0]
+            old_net1 = pairs[0][1]
+            old_net2 = pairs[1][1]
+            old_info = '%s:%s <%s:%s, %s:%s>' % (
+                        old_acl.lineNumber, old_acl.name,
+                        old_net1.lineNumber, old_net1.code,
+                        old_net2.lineNumber, old_net2.code,
+                        )
+            new_info = '%s:%s <%s:%s, %s:%s>' % (
+                        acl.lineNumber, acl.name,
+                        new_net1.lineNumber, new_net1.code,
+                        new_net2.lineNumber, new_net2.code,
+                        )
+            msg =  'coexist problem: %s\n' % old_info
+            msg += '                 %s' % new_info
+            print(msg, file=sys.stderr)
 
     def save(self, dbFile):
         """ Save the group data to a database file.
@@ -160,10 +229,12 @@ class AclGroup(TreeGroup):
         """ Check if the introduction of the node cause a violation of
         the AclGroup's Acl rule
         """
-        TreeGroup.defaultValidator(node, group) # ensure uniqe
-        for old_acl in group.values():
-            if not self.coexist(new_acl, old_acl):
-                raise NotCoexistsException('%s with %s' % (new_acl.name, old_acl.name))
+        TreeGroup.defaultValidator(self, new_acl, group) # ensure uniqe
+        acl_group = [x for x in group.values() if isinstance(x, Acl)]
+        for old_acl in acl_group:
+            stat, pairs = self.coexist(new_acl, old_acl)
+            if not stat:
+                raise NotCoexistsException(old_acl, pairs)
         return True
 
     def coexist(self, acl1, acl2):
@@ -173,15 +244,19 @@ class AclGroup(TreeGroup):
         than any networks in acl2.
         """
         bad_relation = None
+        rela_pairs   = []
         networks1    = acl1.networks()
         networks2    = acl2.networks()
         for net1 in networks1:
             for net2 in networks2:
                 r = net1.compare(net2)
                 if r == bad_relation:
-                    return False
+                    rela_pairs.append((net1, net2))
+                    return (False, rela_pairs)
                 if r == Network.GREATER:
                     bad_relation = Network.LESS
+                    rela_pairs.append((net1, net2))
                 elif r == Network.LESS:
                     bad_relation = Network.GREATER
-        return True
+                    rela_pairs.append((net1, net2))
+        return (True, None)
