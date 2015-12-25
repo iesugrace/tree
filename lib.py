@@ -159,6 +159,15 @@ class TreeGroup:
         else:
             raise NodeExistsException(group[node.name])
 
+    def getNode(self, name):
+        """ Return the node of the provided name
+        """
+        try:
+            node = self.data[name]
+        except KeyError:
+            node = None
+        return node
+
     def deleteNode(self, node):
         """ Delete the provided node from the group, a KeyError
         exception will be raised if the node is not found in the group.

@@ -157,20 +157,32 @@ class AclGroup(TreeGroup):
         lines = open(dbFile, 'rb').readlines()
         acl = None
         for num, line in enumerate(lines, 1):
-            if re.search(b'^\s*#', line):   # ignore comment
+            # comment line
+            if re.search(b'^\s*#', line):
                 continue
-            elif b'acl' in line:            # acl line
+            # acl line
+            if b'acl' in line:
                 if acl:
                     self.addAcl(acl)
                 acl_name  = line.split(b'"')[1].decode()
                 acl       = Acl(acl_name, lineNumber=num)
-            else:   # network line
-                match = re.search(b'([0-9]+\.){3}[0-9]+/[0-9]+', line)
-                if match:
-                    net_name = match.group(0).decode()
-                    net      = Network(net_name, lineNumber=num, code=net_name)
-                    if self.addNetwork(net):
-                        acl.attachChild(net)
+                continue
+            # network line
+            match = re.search(b'([0-9]+\.){3}[0-9]+/[0-9]+', line)
+            if match:
+                net_name = match.group(0).decode()
+                net      = Network(net_name, lineNumber=num, code=net_name)
+                if self.addNetwork(net):
+                    acl.attachChild(net)
+                continue
+            # sub-acl line
+            match = re.search(b'"(.*)"', line)
+            if match:
+                subacl_name = match.group(1).decode()
+                subacl      = self.getNode(subacl_name)
+                if subacl:
+                    acl.attachChild(subacl)
+                continue
         if acl:
             self.addAcl(acl)
 
