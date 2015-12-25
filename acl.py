@@ -201,36 +201,29 @@ class AclGroup(TreeGroup):
         else:
             return True
 
-    def addAcl(self, acl):
-        """ Add the acl to the group
+    def addAcl(self, begin_acl):
+        """ Add the acl to the group. If the new acl can not coexist
+        with the existing one, do a binary split to the parent acls
+        of the networks which cause the problem, and try again to add
+        the new set of ACLs.
         """
-        try:
-            self.addNode(acl, self.aclValidator, (self.data,))
-        except NodeExistsException as e:
-            obj  = e.args[0]
-            offended_info = '%s:%s' % (obj.lineNumber, obj.name)
-            print('duplicate acl: %s, %s:%s' %
-                    (offended_info, acl.lineNumber, acl.name), file=sys.stderr)
-        except NotCoexistsException as e:
-            old_acl  = e.args[0]
-            pairs    = e.args[1]
-            new_net1 = pairs[0][0]
-            new_net2 = pairs[1][0]
-            old_net1 = pairs[0][1]
-            old_net2 = pairs[1][1]
-            old_info = '%s:%s <%s:%s, %s:%s>' % (
-                        old_acl.lineNumber, old_acl.name,
-                        old_net1.lineNumber, old_net1.code,
-                        old_net2.lineNumber, old_net2.code,
-                        )
-            new_info = '%s:%s <%s:%s, %s:%s>' % (
-                        acl.lineNumber, acl.name,
-                        new_net1.lineNumber, new_net1.code,
-                        new_net2.lineNumber, new_net2.code,
-                        )
-            msg =  'coexist problem: %s\n' % old_info
-            msg += '                 %s' % new_info
-            print(msg, file=sys.stderr)
+        acls = {begin_acl.name: begin_acl}
+        while acls:
+            acl_name = list(acls.keys())[0]
+            acl_obj  = acls.pop(acl_name)
+            try:
+                self.addNode(acl_obj, self.aclValidator, (self.data,))
+            except NodeExistsException as e:
+                obj  = e.args[0]
+                offended_info = '%s:%s' % (obj.lineNumber, obj_name)
+                print('duplicate acl: %s, %s:%s' %
+                        (offended_info, acl_obj.lineNumber, acl_name), file=sys.stderr)
+            except NotCoexistsException as e:
+                # split and retry with the new ones
+                nets     = [x[0] for x in e.args[0]]
+                new_acls = self.splitAclTree(acl_obj, nets)
+                for new_acl in new_acls:
+                    acls[new_acl.name] = new_acl
 
     def save(self, dbFile):
         """ Save the group data to a database file.
@@ -246,29 +239,30 @@ class AclGroup(TreeGroup):
         for old_acl in acl_group:
             stat, pairs = self.coexist(new_acl, old_acl)
             if not stat:
-                raise NotCoexistsException(old_acl, pairs)
+                raise NotCoexistsException(pairs)
         return True
 
     def coexist(self, acl1, acl2):
         """ Check if acl1 can coexist with acl2 in the same group.
         The rule is: if acl1.net1.compare(acl2.net1) yields a GREATER
         result, then all of the networks in acl1 shall not be LESS
-        than any networks in acl2.
+        than any networks in acl2. Return the shorter relation list.
         """
-        bad_relation = None
-        rela_pairs   = []
-        networks1    = acl1.networks()
-        networks2    = acl2.networks()
+        l_rela    = []
+        g_rela    = []
+        networks1 = acl1.networks()
+        networks2 = acl2.networks()
         for net1 in networks1:
             for net2 in networks2:
                 r = net1.compare(net2)
-                if r == bad_relation:
-                    rela_pairs.append((net1, net2))
-                    return (False, rela_pairs)
                 if r == Network.GREATER:
-                    bad_relation = Network.LESS
-                    rela_pairs.append((net1, net2))
+                    g_rela.append((net1, net2))
                 elif r == Network.LESS:
-                    bad_relation = Network.GREATER
-                    rela_pairs.append((net1, net2))
-        return (True, None)
+                    l_rela.append((net1, net2))
+        l_len = len(l_rela)
+        g_len = len(g_rela)
+        if l_len and g_len:
+            rela = l_rela if l_len < g_len else g_rela
+            return (False, rela)
+        else:
+            return (True, None)
