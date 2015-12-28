@@ -25,6 +25,9 @@ class Node:
     def __repr__(self):
         return self.name
 
+    def rename(self, new_name):
+        self.name = new_name
+
     def setParent(self, newParent):
         """ Set the provided parent as the node's parent.
         Raise an exception if the parent is not a branch.
@@ -34,6 +37,17 @@ class Node:
         if self.parent:
             self.parent.clearChildNodes()
         newParent.attachChild(self)
+
+    def parents(self):
+        """ Return a list of parents from the node up,
+        nearest first.
+        """
+        res = []
+        parent = self.parent
+        while parent:
+            res.append(parent)
+            parent = parent.parent
+        return res
 
 
 class Leaf(Node): pass

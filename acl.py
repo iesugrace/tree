@@ -144,14 +144,22 @@ class AclGroup(TreeGroup):
 
         Sample ACL database format:
             # comment
-            acl "ACL_NAME" {
+            acl "sub_acl" {
                 ecs 114.213.144.0/20;
                 ecs 114.213.160.0/19;
             };
-
+            acl "parent_acl" {
+                "sub_acl";
+            };
         A line starts with # is a comment, will be ignored, a line
         contains 'acl' is the start of an acl definition, a network
-        definition is of form 0.0.0.0/0, other lines will be ignored.
+        definition is of form 0.0.0.0/0, sub acl's name must be
+        quoted, other lines will be ignored.
+
+        We delay the coexistent check after all the data are loaded,
+        in order to preserve the relationship of acls, because the
+        name of the acl will be changed when split it, thus break
+        the link with its parent.
         """
         self.data = {}
         lines = open(dbFile, 'rb').readlines()
@@ -185,6 +193,7 @@ class AclGroup(TreeGroup):
                 continue
         if acl:
             self.addAcl(acl)
+        self.removeConflicts()
 
     def addNetwork(self, net):
         """ Add the network to the group
@@ -201,29 +210,131 @@ class AclGroup(TreeGroup):
         else:
             return True
 
-    def addAcl(self, begin_acl):
-        """ Add the acl to the group. If the new acl can not coexist
-        with the existing one, do a binary split to the parent acls
-        of the networks which cause the problem, and try again to add
-        the new set of ACLs.
+    def parentsOfNets(self, nets):
+        """ Return a unique set of parents of networks
+        """
+        l = []
+        for net in nets:
+            l.extend(net.parents())
+        return set(l)
+
+    def addAcl(self, begin_acl, validator=None, args=None):
+        """ Add the acl to the group. Duplicate name of acl
+        will be ignored; for a NotCoexistsException exception,
+        do a binary split to the parent acls of the networks
+        which cause the problem, and try again to add the new
+        set of ACLs. For optimazation, we split out the group
+        of networks which creates less new Acls involves less
+        operations.
         """
         acls = {begin_acl.name: begin_acl}
         while acls:
             acl_name = list(acls.keys())[0]
             acl_obj  = acls.pop(acl_name)
             try:
-                self.addNode(acl_obj, self.aclValidator, (self.data,))
+                if validator:
+                    self.addNode(acl_obj, validator, args)
+                else:
+                    self.addNode(acl_obj)   # default validator
             except NodeExistsException as e:
                 obj  = e.args[0]
                 offended_info = '%s:%s' % (obj.lineNumber, obj_name)
                 print('duplicate acl: %s, %s:%s' %
                         (offended_info, acl_obj.lineNumber, acl_name), file=sys.stderr)
-            except NotCoexistsException as e:
-                # split and retry with the new ones
-                nets     = [x[0] for x in e.args[0]]
-                new_acls = self.splitAclTree(acl_obj, nets)
-                for new_acl in new_acls:
-                    acls[new_acl.name] = new_acl
+            except NotCoexistsException as e:   # split and retry
+                # pick the least acls/efforts nets
+                less_rela, greater_rela = e.args[0]
+                l_n_nets = set([x[0] for x in less_rela])   # nets of new acl in LESS group
+                l_o_nets = set([x[1] for x in less_rela])   # nets of old acl in LESS group
+                g_n_nets = set([x[0] for x in greater_rela])
+                g_o_nets = set([x[1] for x in greater_rela])
+                old_acl  = e.args[1]
+                count_new = len(self.parentsOfNets(l_n_nets))   # parents of new acl
+                count_old = len(self.parentsOfNets(l_o_nets))   # parents of old acl
+                if count_new < count_old:
+                    g = (acl_obj, l_n_nets, g_n_nets)
+                else:
+                    g = (old_acl, l_o_nets, g_o_nets)
+                acl = g[0]
+                net = g[1] if len(g[1]) < len(g[2]) else g[2]
+
+                if acl == acl_obj: # split the new
+                    new_acls = self.splitAclTree(acl, net)
+                    for new_acl in new_acls:
+                        acls[new_acl.name] = new_acl
+                else:   # split the old
+                    old_acl_name = acl.name # get name befor split
+                    old_acl0, old_acl1 = self.splitAclTree(acl, net)
+                    self.data.pop(old_acl_name)
+                    self.data[old_acl0.name] = old_acl0
+                    self.data[old_acl1.name] = old_acl1
+                    acls[acl_name] = acl_obj
+
+    def removeConflicts(self):
+        """ Re-add all ACLs again to deal with the coexistent
+        problem. Pass an acl validator for checking, and let
+        self.addAcl do the work.
+        """
+        acls = [x for x in self.data.values()
+                if isinstance(x, Acl) and not x.parent]
+        self.data = {}
+        for acl in acls:
+            self.addAcl(acl, self.aclValidator, (self.data,))
+
+    def splitAclTree(self, top_acl, nets):
+        """ For every network in the 'nets', split all ACLs
+        in the line from the network up to the 'top_acl'.
+
+        Example: Split net1, net3, net5, net6 out.
+
+        Before:                     After:
+
+        net1──┐                     net2──C0──A0──┐
+              │                                   │
+        net2──C──A──┐               net4──D0──B0──┴─TOP0
+                    │
+        net3──┐     ├─TOP           net1──C1──A1──┬─TOP1
+              │     │                             │
+        net4──D──B──┤               net3──D1──B1──┤
+              │     │                     │       │
+        net5──┘     │               net5──┘       │
+              net6──┘                       net6──┘
+
+        """
+        new_acls = {}
+        res_acls = []
+        for net in nets:
+            node   = net
+            parent = node.parent
+            while True:         # split all parents up the line
+                if len(parent.childNodes) == 1:
+                    node   = parent
+                    parent = node.parent
+                    continue
+                if parent.name[-2:] == '-0':
+                    # when process another net in the same
+                    # method call, branch1 may already be
+                    # created when processed a previous net.
+                    branch1_name = parent.name[:-1] + '1'
+                    if branch1_name in new_acls:
+                        new_acls[branch1_name].moveChild(node)
+                        break
+                # split
+                branch1_name = parent.name + '-1'
+                branch1 = Acl(branch1_name)
+                branch1.moveChild(node)
+                new_acls[branch1.name] = branch1 # another net may want it
+                branch0_name = parent.name + '-0'
+                parent.rename(branch0_name)
+                branch0 = parent
+                node   = branch1
+                parent = branch0.parent
+                if parent:
+                    parent.attachChild(branch1)
+                else:   # splitting hit the top, done
+                    res_acls = [branch0, branch1]
+                    break
+        return res_acls
 
     def save(self, dbFile):
         """ Save the group data to a database file.
@@ -231,22 +342,21 @@ class AclGroup(TreeGroup):
         # write to the acl database
 
     def aclValidator(self, new_acl, group):
-        """ Check if the introduction of the node cause a violation of
-        the AclGroup's Acl rule
+        """ Check if the introduction of the
+        new_acl causes a coexistent probjem.
         """
-        TreeGroup.defaultValidator(self, new_acl, group) # ensure uniqe
         acl_group = [x for x in group.values() if isinstance(x, Acl)]
         for old_acl in acl_group:
-            stat, pairs = self.coexist(new_acl, old_acl)
+            stat, relations = self.coexist(new_acl, old_acl)
             if not stat:
-                raise NotCoexistsException(pairs)
+                raise NotCoexistsException(relations, old_acl)
         return True
 
     def coexist(self, acl1, acl2):
         """ Check if acl1 can coexist with acl2 in the same group.
         The rule is: if acl1.net1.compare(acl2.net1) yields a GREATER
         result, then all of the networks in acl1 shall not be LESS
-        than any networks in acl2. Return the shorter relation list.
+        than any networks in acl2. Return two relation lists.
         """
         l_rela    = []
         g_rela    = []
@@ -259,10 +369,7 @@ class AclGroup(TreeGroup):
                     g_rela.append((net1, net2))
                 elif r == Network.LESS:
                     l_rela.append((net1, net2))
-        l_len = len(l_rela)
-        g_len = len(g_rela)
-        if l_len and g_len:
-            rela = l_rela if l_len < g_len else g_rela
-            return (False, rela)
+        if len(l_rela) and len(g_rela):
+            return (False, [l_rela, g_rela])
         else:
             return (True, None)
