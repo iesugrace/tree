@@ -87,6 +87,17 @@ class Branch(Node):
         self.childNodes.append(node)
         node.parent = self
 
+    def moveChild(self, node):
+        """ Attach the given node to the branch, if the node belongs to
+        a branch already, detach the node from that branch first.
+        """
+        node_parent = node.parent
+        if node_parent is None:
+            self.attachChild(node)
+        elif node_parent is not self:
+            node_parent.detachChild(node, sure=True)
+            self.attachChild(node)
+
     def detachChild(self, node, sure=False):
         """ detach the given node from the branch. Raise an exception
         if node doesn't belong to the branch.
@@ -188,11 +199,7 @@ class TreeGroup:
             raise NodeNotExistsException('%s not exists' % parent.name)
         if not isinstance(parent, Branch):
             raise NotBranchException('%s is not a branch' % parent.name)
-        if node.parent is None:
-            parent.attachChild(node)
-        elif node.parent is not parent:
-            node.parent.detachChild(node, sure=True)
-            parent.attachChild(node)
+        parent.moveChild(node)
 
     def load(self, dbFile, parser):
         """ Load data from a database, the existing data of the group will
