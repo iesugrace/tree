@@ -107,6 +107,40 @@ class Acl(Branch):
         return nonredundant_nets
 
 
+class AclDbFormat:
+    """ Define the acceptable format of
+    lines for the ACL database file.
+    """
+    COMMENT  = 1
+    ACLSTART = 2
+    ACLEND   = 3
+    NETWORK  = 4
+    SUBACL   = 5
+    OTHER    = 6
+
+    def match(self, line):
+        """ Identify the type of the line
+        """
+        if re.search(b'^\s*#', line):
+            self.matchData = None
+            return self.COMMENT
+        if b'acl' in line:
+            self.matchData = line.split(b'"')[1].decode()
+            return self.ACLSTART
+        if line == b'};\n':
+            self.matchData = None
+            return self.ACLEND
+        match = re.search(b'([0-9]+\.){3}[0-9]+/[0-9]+', line)
+        if match:
+            self.matchData = match.group(0).decode()
+            return self.NETWORK
+        match = re.search(b'"(.*)"', line)
+        if match:
+            self.matchData = match.group(1).decode()
+            return self.SUBACL
+        return self.OTHER
+
+
 class AclGroup(TreeGroup):
     """ All nodes in the group are unique in name. A single network
     can overlap another network inside an Acl, like 7.7.0.0/16 overlaps
@@ -194,6 +228,24 @@ class AclGroup(TreeGroup):
         if acl:
             self.addAcl(acl)
         self.removeConflicts()
+
+    def checkSyntax(self, dbFile):
+        """ Check if all lines in dbFile conforms to the rules.
+        Even the dbFile have no syntax error from DNS server's
+        perspective, it may not fully conform to our rules.
+        A network 119.120.121.0 is ok for DNS server, but we
+        don't allow this, every network shall have a subnet
+        suffix, like 119.120.121.0/24.
+        """
+        lines = open(dbFile, 'rb').readlines()
+        fmt   = AclDbFormat()
+        stat  = True
+        for num, line in enumerate(lines, 1):
+            if fmt.match(line) == AclDbFormat.OTHER:
+                line = line.decode().rstrip('\n')
+                print('error: %s:%s' % (num, line), file=sys.stderr)
+                stat = False
+        return stat
 
     def addNetwork(self, net):
         """ Add the network to the group
