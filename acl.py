@@ -169,7 +169,7 @@ class AclGroup(TreeGroup):
     give a chance for this class to validate the ACLs.
     """
 
-    def load(self, dbFile):
+    def load(self, dbFile, ignore_syntax=True):
         """ Load data from a database, the existing data of the group
         will be abandoned. Add in this manner: for each ACL, add all
         its networks to the group, and link all its networks with it,
@@ -195,32 +195,31 @@ class AclGroup(TreeGroup):
         name of the acl will be changed when split it, thus break
         the link with its parent.
         """
+        if not self.checkSyntax(dbFile) and not ignore_syntax:
+            print('syntax error found in %s' % dbFile, file=sys.stderr)
+            return False
+
         self.data = {}
-        lines = open(dbFile, 'rb').readlines()
-        acl = None
+        fmt       = AclDbFormat()
+        lines     = open(dbFile, 'rb').readlines()
+        acl       = None
         for num, line in enumerate(lines, 1):
-            # comment line
-            if re.search(b'^\s*#', line):
+            if fmt.match(line) == AclDbFormat.COMMENT:
                 continue
-            # acl line
-            if b'acl' in line:
+            if fmt.match(line) == AclDbFormat.ACLSTART:
                 if acl:
                     self.addAcl(acl)
-                acl_name  = line.split(b'"')[1].decode()
-                acl       = Acl(acl_name, lineNumber=num)
+                acl_name = fmt.matchData
+                acl      = Acl(acl_name, lineNumber=num)
                 continue
-            # network line
-            match = re.search(b'([0-9]+\.){3}[0-9]+/[0-9]+', line)
-            if match:
-                net_name = match.group(0).decode()
+            if fmt.match(line) == AclDbFormat.NETWORK:
+                net_name = fmt.matchData
                 net      = Network(net_name, lineNumber=num, code=net_name)
                 if self.addNetwork(net):
                     acl.attachChild(net)
                 continue
-            # sub-acl line
-            match = re.search(b'"(.*)"', line)
-            if match:
-                subacl_name = match.group(1).decode()
+            if fmt.match(line) == AclDbFormat.SUBACL:
+                subacl_name = fmt.matchData
                 subacl      = self.getNode(subacl_name)
                 if subacl:
                     acl.attachChild(subacl)
