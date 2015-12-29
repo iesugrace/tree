@@ -338,8 +338,54 @@ class AclGroup(TreeGroup):
 
     def save(self, dbFile):
         """ Save the group data to a database file.
+        for nested ACL, output the inner one, then
+        the outer one.
         """
-        # write to the acl database
+        def format_node(node):
+            """ Format the node's data, produce a string
+            """
+            text   = bytearray()
+            prefix = '    '     # four spaces
+
+            # header
+            header = 'acl "%s" {\n' % node.name
+            text.extend(header.encode())
+
+            # nested acls
+            nested_acls = [x for x in node.childNodes if isinstance(x, Acl)]
+            for acl in nested_acls:
+                sub_text = '%s"%s";\n' % (prefix, acl.name)
+                text.extend(sub_text.encode())
+
+            # networks
+            nets = [x for x in node.childNodes if isinstance(x, Network)]
+            for net in nets:
+                sub_text = '%s%s;\n' % (prefix, net.name)
+                text.extend(sub_text.encode())
+
+            # tail
+            tail = '};\n'
+            text.extend(tail.encode())
+
+            return text.decode()
+
+        def format_acl(acl, queue):
+            """ Store the acl and its nested child ACLs
+            in a reverse order
+            """
+            text   = format_node(acl)
+            queue.append(text)
+            subacls = [x for x in acl.childNodes if isinstance(x, Acl)]
+            for subacl in subacls:
+                format_acl(subacl, queue)
+
+        heads = [v for k, v in self.data.items() if not v.parent]
+        ofile = open(dbFile, 'w')
+        for head in heads:
+            queue = []
+            format_acl(head, queue)
+            lines = queue[::-1]
+            ofile.writelines(lines)
 
     def aclValidator(self, new_acl, group):
         """ Check if the introduction of the
