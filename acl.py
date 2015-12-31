@@ -13,10 +13,11 @@ import sys
 # decorator function
 def addMoreInfo(c):
     class X(c):
-        def __init__(self, *pargs, lineNumber=0, code=None, **kargs):
+        def __init__(self, *pargs, lineNumber=0, code=None, comment=None, **kargs):
             c.__init__(self, *pargs, **kargs)
             self.lineNumber = lineNumber
             self.code       = code
+            self.comment    = comment
     return X
 
 
@@ -125,20 +126,32 @@ class AclDbFormat:
             self.matchData = None
             return self.COMMENT
         if b'acl' in line:
-            self.matchData = line.split(b'"')[1].decode()
+            self.matchData   = line.split(b'"')[1].decode()
+            self.commentData = self.extractComment(line)
             return self.ACLSTART
         if line == b'};\n':
             self.matchData = None
             return self.ACLEND
         match = re.search(b'([0-9]+\.){3}[0-9]+/[0-9]+', line)
         if match:
-            self.matchData = match.group(0).decode()
+            self.matchData   = match.group(0).decode()
+            self.commentData = self.extractComment(line)
             return self.NETWORK
         match = re.search(b'"(.*)"', line)
         if match:
             self.matchData = match.group(1).decode()
             return self.SUBACL
         return self.OTHER
+
+    def extractComment(self, line):
+        """ Extract the comment info. line is a bytes,
+        return a bytes if there is any, or None.
+        """
+        i = line.find(b'#')
+        if i > 0:
+            return line[i:].rstrip(b'\n')
+        else:
+            return None
 
 
 class AclGroup(TreeGroup):
@@ -210,11 +223,13 @@ class AclGroup(TreeGroup):
                 if acl:
                     self.addAcl(acl)
                 acl_name = fmt.matchData
-                acl      = Acl(acl_name, lineNumber=num)
+                cmnt     = fmt.commentData
+                acl      = Acl(acl_name, lineNumber=num, comment=cmnt)
                 continue
             if fmt.match(line) == AclDbFormat.NETWORK:
                 net_name = fmt.matchData
-                net      = Network(net_name, lineNumber=num, code=net_name)
+                cmnt     = fmt.commentData
+                net      = Network(net_name, lineNumber=num, code=net_name, comment=cmnt)
                 if self.addNetwork(net):
                     acl.attachChild(net)
                 continue
@@ -393,14 +408,17 @@ class AclGroup(TreeGroup):
         the outer one.
         """
         def format_node(node):
-            """ Format the node's data, produce a string
+            """ Format the node's data, return a bytes
             """
             text   = bytearray()
             prefix = '    '     # four spaces
 
             # header
-            header = 'acl "%s" {\n' % node.name
-            text.extend(header.encode())
+            header = 'acl "%s" {' % node.name
+            if node.comment:
+                text.extend(header.encode() + b' ' +  node.comment + b'\n')
+            else:
+                text.extend(header.encode() + b'\n')
 
             # nested acls
             nested_acls = [x for x in node.childNodes if isinstance(x, Acl)]
@@ -411,14 +429,17 @@ class AclGroup(TreeGroup):
             # networks
             nets = [x for x in node.childNodes if isinstance(x, Network)]
             for net in nets:
-                sub_text = '%s%s;\n' % (prefix, net.name)
-                text.extend(sub_text.encode())
+                sub_text = '%s%s;' % (prefix, net.name)
+                if net.comment:
+                    text.extend(sub_text.encode() + b' ' +  net.comment + b'\n')
+                else:
+                    text.extend(sub_text.encode() + b'\n')
 
             # tail
             tail = '};\n'
             text.extend(tail.encode())
 
-            return text.decode()
+            return bytes(text)
 
         def format_acl(acl, queue):
             """ Store the acl and its nested child ACLs
@@ -431,7 +452,7 @@ class AclGroup(TreeGroup):
                 format_acl(subacl, queue)
 
         heads = [v for k, v in self.data.items() if not v.parent]
-        ofile = open(dbFile, 'w')
+        ofile = open(dbFile, 'wb')
         for head in heads:
             queue = []
             format_acl(head, queue)
