@@ -87,8 +87,34 @@ class Acl(Branch):
     """
     def networks(self):
         """ Return a non-redundant list of networks of the ACL.
+        An ACL of the following networks:
+
+            192.168.1.0/24;
+            192.168.0.0/16;
+
+        shall produce a list of [192.168.0.0/16]
         """
         networks = self.leaves()
+        uni_nets = self.uniqNets(networks)
+        return uni_nets
+
+    def directUniqNetworks(self):
+        """ Return a non-redundant list of networks directly
+        attached to the ACL.
+        """
+        networks = [x for x in self.childNodes if isinstance(x, Network)]
+        uni_nets = self.uniqNets(networks)
+        return uni_nets
+
+    def uniqNets(self, networks):
+        """ Remove the small networks which are covered
+        by a larger one, these two networks
+
+            192.168.1.0/24;
+            192.168.0.0/16;
+
+        shall produce a result of [192.168.0.0/16]
+        """
         nonredundant_nets = []
         reduced_networks = networks[:]
         for net1 in networks:
@@ -106,6 +132,13 @@ class Acl(Branch):
                     reduced_networks.remove(net2)
             nonredundant_nets.append(net1)
         return nonredundant_nets
+
+    def removeRedundant(self):
+        """ Remove the redundant networks in an ACL
+        """
+        uniqNets      = self.directUniqNetworks()
+        directSubAcls = [x for x in self.childNodes if isinstance(x, Acl)]
+        self.childNodes = directSubAcls + uniqNets
 
 
 class AclDbFormat:
@@ -221,6 +254,8 @@ class AclGroup(TreeGroup):
                 continue
             if fmt.match(line) == AclDbFormat.ACLSTART:
                 if acl:
+                    # remove redundant networks before adding
+                    acl.removeRedundant()
                     self.addAcl(acl)
                 acl_name = fmt.matchData
                 cmnt     = fmt.commentData
@@ -240,6 +275,8 @@ class AclGroup(TreeGroup):
                     acl.attachChild(subacl)
                 continue
         if acl:
+            # remove redundant networks before adding
+            acl.removeRedundant()
             self.addAcl(acl)
         self.removeConflicts()
 
