@@ -165,9 +165,9 @@ class AclDbFormat:
         if line == b'};\n':
             self.matchData = None
             return self.ACLEND
-        match = re.search(b'([0-9]+\.){3}[0-9]+/[0-9]+', line)
+        match = re.search(b'^\s*(ecs )?\s*(([0-9]+\.){3}[0-9]+/[0-9]+)', line)
         if match:
-            self.matchData   = match.group(0).decode()
+            self.matchData   = match.group(2).decode()
             self.commentData = self.extractComment(line)
             return self.NETWORK
         match = re.search(b'"(.*)"', line)
