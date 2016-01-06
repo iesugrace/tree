@@ -15,16 +15,15 @@ class View:
     """ Represents a view entry in the view database.
     When we process the view config, only the view name
     and the related acl name is significant, othe config
-    will be simply treated as 'rest of the config' and
+    will be simply treated as 'other config' and
     remain intact.
     """
-    def __init__(self, name, config):
-        """ data is bytes, name is str.
+    def __init__(self, name, aclName, otherConfig):
+        """ name and aclName are str, otherConfig is bytes
         """
         self.name        = name
-        acl_name, rest   = self.parseData(config)
-        self.acl_name    = acl_name   # str
-        self.otherConfig = rest       # bytes
+        self.aclName     = aclName      # str
+        self.otherConfig = otherConfig  # bytes
 
     @staticmethod
     def parseConfig(lines):
@@ -55,8 +54,8 @@ class View:
         if not re.match(b'\s*match-clients\s', acl_line):
             raise InvalidViewConfigException
         rest_lines = lines[1:]
-        acl_name   = acl_line.split(b';')[-3].decode()
-        return (acl_name, rest_lines)
+        aclName    = acl_line.split(b';')[-3].decode()
+        return (aclName, rest_lines)
 
 
 class ViewGroup:
