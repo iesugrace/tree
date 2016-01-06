@@ -55,5 +55,40 @@ class View:
 
 
 class ViewGroup:
-    """
+    """ All views in the group are unique in name. The acl of one
+    view can overlap the one of another view, provided the view
+    of the LESS acl be placed first.
+    for instance:
+
+        view1 -- acl1 -- {192.168.0.0/16;}
+        view2 -- acl2 -- {192.168.1.0/24; 10.1.0.0/16;}
+
+        view2 MUST be placed in front of view1 in the
+        database, because acl2 is LESS that acl1.
+
+    But the relationship may be more complex when these
+    three are putting together in the same view database:
+
+        view1 -- acl1 -- {192.168.1.0/24; 10.1.0.0/16;}
+        view2 -- acl2 -- {192.168.0.0/16; 172.16.1.0/24;}
+        view3 -- acl3 -- {172.16.0.0/16; 10.1.1.0/24}
+
+        The relationship is: acl1 < acl2 < acl3 < acl1. It's a loop
+        here, which can not satisfy the 'LESS first' rule.
+        To deal with this problem, we separate acl3 and view3.
+
+    In the ViewGroup, all views are organized in two categories:
+
+        1. Free views
+            In this category, acl of any view doesn't have common
+            part with any other view in the whole ViewGroup. One
+            dictionary or set is well suited for holding all these
+            kind of views of a single ViewGroup.
+        2. Ordered views
+            If a view's acl is LESS or GREATER than another view's,
+            these two views are put in a list which is ordered,
+            LESS acl first. A ViewGroup may contain multiple such
+            ordered lists, order is only matter within a list, not
+            between lists, so a list can be placed before or after
+            another.
     """
