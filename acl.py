@@ -219,8 +219,7 @@ class AclGroup(TreeGroup):
         """ Load data from a database, the existing data of the group
         will be abandoned. Add in this manner: for each ACL, add all
         its networks to the group, and link all its networks with it,
-        then add the ACL itself to the group. Exception may raised by
-        Network class or Branch.addNode method during processing.
+        then add the ACL itself to the group.
 
         Sample ACL database format:
             # comment
