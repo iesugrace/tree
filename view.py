@@ -13,13 +13,13 @@ import sys
 class View:
     """ Represents a view entry in the view database.
     """
-    def __init__(self, name, data):
+    def __init__(self, name, config):
         """ data is bytes, name is str.
         """
-        self.name      = name
-        acl, data      = self.parseData(data)
-        self.acl       = acl    # str
-        self.otherData = data   # bytes
+        self.name        = name
+        acl_name, rest   = self.parseData(config)
+        self.acl_name    = acl_name   # str
+        self.otherConfig = rest       # bytes
 
     def parseConfig(config):
         """ extract the ACL info from config, return
