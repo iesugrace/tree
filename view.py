@@ -6,6 +6,7 @@ Desc: Application that makes use of the acl library
 to maintain a View database.
 
 """
+from lib import *
 from acl import *
 import re
 import sys
@@ -25,10 +26,13 @@ class View:
         self.acl_name    = acl_name   # str
         self.otherConfig = rest       # bytes
 
+    @staticmethod
     def parseConfig(config):
         """ extract the ACL info from config, return
         the ACL name as a str, and the rest of the
-        view config as a list of bytes.
+        view config as a list of bytes. The line which
+        contains the ACL info shall be the first line
+        of the 'config'
 
         For this view config code in the view database:
 
@@ -49,6 +53,8 @@ class View:
         """
         lines = config.rstrip('\n').split(b'\n')
         acl_line   = lines[0]
+        if not re.match(b'\s*match-clients\s', acl_line):
+            raise InvalidViewConfigException
         rest_lines = lines[1:]
         acl_name   = acl_line.split(b';')[-3].decode()
         return (acl_name, rest_lines)
