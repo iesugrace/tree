@@ -21,16 +21,33 @@ class View:
         self.acl       = acl    # str
         self.otherData = data   # bytes
 
-    def parseData(data):
-        """ extract the ACL info from data, return
+    def parseConfig(config):
+        """ extract the ACL info from config, return
         the ACL name as a str, and the rest of the
-        view config data as a list of bytes.
+        view config as a list of bytes.
+
+        For this view config code in the view database:
+
+        view "VIEW_NAME" {
+            match-clients           { key key_name;ACL_NAME; };
+            ...
+            ... other view config lines
+            ...
+        };
+
+        The 'config' will be these four lines:
+
+            match-clients           { key key_name;ACL_NAME; };
+            ...
+            ... other view config lines
+            ...
+
         """
-        lines = data.rstrip('\n').split(b'\n')
+        lines = config.rstrip('\n').split(b'\n')
         acl_line   = lines[0]
         rest_lines = lines[1:]
-        acl        = acl_line.split(b';')[-3].decode()
-        return (acl, rest_lines)
+        acl_name   = acl_line.split(b';')[-3].decode()
+        return (acl_name, rest_lines)
 
 
 class ViewGroup:
