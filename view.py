@@ -96,3 +96,89 @@ class ViewGroup:
             between lists, so a list can be placed before or after
             another.
     """
+
+    def load(self, dbFile, ignore_syntax=True):
+        """ Load data from a database, the existing data of the group
+        will be abandoned.
+        """
+        self.data = {}
+        viewBlocks = self.preproc(dbFile)
+        for block in viewBlocks:
+            lines = block.split(b'\n')
+            view_name = lines[0].split(b'"')[1].decode()
+            n = self.locateLine(lines, b'^};')
+            if n is None:
+                raise InvalidViewConfigException
+            lines = lines[1:n]
+            parsed = View.parseConfig(lines)
+            aclName = parsed[0]
+            otherConfig = parsed[1]
+            view = View(view_name, aclName, otherConfig)
+            self.addView(view)
+
+    def addView(self, begin_view, validator=None, args=None):
+        """ Add the view to the group. Duplicate name of view
+        will be ignored.
+        """
+        views = {begin_view.name: begin_view}
+        while views:
+            view_name = list(views.keys())[0]
+            view_obj  = views.pop(view_name)
+            try:
+                if validator:
+                    self.__addView(view_obj, validator, args)
+                else:
+                    self.__addView(view_obj)   # default validator
+            except ViewExistsException as e:
+                obj  = e.args[0]
+                print('duplicate view: %s' % obj_name, file=sys.stderr)
+            except NotCoexistsException as e:   # split and retry
+                pass
+
+    def __addView(self, obj, validator=None, vpargs=(), vkargs={}):
+        if not validator:
+            validator = self.defaultValidator
+            vpargs    = (self.data,)
+            vkargs    = {}
+        validator(obj, *vpargs, **vkargs)  # may raise an exception
+        self.data[obj.name] = obj
+        return True
+
+    def defaultValidator(self, view, group):
+        """ Default validator of the ViewGroup
+        Ensure unique view name in the group.
+        """
+        if view.name not in group:
+            return True
+        else:
+            raise ViewExistsException(group[view.name])
+
+    def locateLine(self, lines, pattern):
+        """ Return the index number of the matching line
+        None will be returned if none match.
+        """
+        n = None
+        for idx, line in enumerate(lines):
+            if re.search(pattern, line):
+                n = idx
+                break
+        return n
+
+    def preproc(self, dbFile):
+        """ Process the dbFile, return a list of bytes,
+        each bytes contains all config data of a view,
+        without the leading 'view' keyword.
+        """
+        lines = open(dbFile, 'rb').read()
+        lines = lines.split(b'\n')
+
+        # remove all comment and empty lines above the first view
+        # and remove the leading keyword 'view' of the first view
+        n = self.locateLine(lines, b'^view\s')
+        if n is None:
+            raise InvalidViewConfigException
+        lines[n] = re.sub(b'^view\s', b'', lines[n])
+        lines   = lines[n:]
+        rawData = b'\n'.join(lines)
+        blocks  = re.split(b'\nview\s', rawData)
+        return blocks
