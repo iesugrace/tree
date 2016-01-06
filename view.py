@@ -12,6 +12,10 @@ import sys
 
 class View:
     """ Represents a view entry in the view database.
+    When we process the view config, only the view name
+    and the related acl name is significant, othe config
+    will be simply treated as 'rest of the config' and
+    remain intact.
     """
     def __init__(self, name, config):
         """ data is bytes, name is str.
