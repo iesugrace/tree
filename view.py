@@ -97,7 +97,7 @@ class ViewGroup:
             another.
     """
 
-    def __init__(self):
+    def __init__(self, acls=[]):
         """
         self.data holds all unprocessed views.
         self.outData holds all ready-for-output views.
@@ -109,11 +109,19 @@ class ViewGroup:
             viewName of an arbitrary view in the list,
             the characters of the key does not matter,
             the uniqueness does.
+        self.acls is the acl data the views will use.
         """
         self.data               = []
         self.outData            = {}
         self.outData['free']    = set()
         self.outData['ordered'] = {}
+        self.acls               = acls
+
+    def attachAclDb(self, acls):
+        """ The acls is a dictionary, key is the
+        acl name, value is the acl object.
+        """
+        self.acls = acls
 
     def load(self, dbFile, ignore_syntax=True):
         """ Load data from a database, the existing data of the group
