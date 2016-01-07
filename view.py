@@ -200,3 +200,42 @@ class ViewGroup:
         rawData = b'\n'.join(lines)
         blocks  = re.split(b'\nview\s', rawData)
         return blocks
+
+    def writeOneView(self, view, ofile):
+        """ Format a code text for the view,
+        and write it to the ofile.
+        """
+        linePrefix  = '    '
+        viewName    = view.name
+        aclName     = view.aclName
+        otherConfig = view.otherConfig
+        header      = 'view "%s" {\n' % viewName
+        keyName     = aclName.lower()
+        aclLine     = '%smatch-clients { key %s; %s; };\n' % (
+                        linePrefix,
+                        keyName,
+                        aclName)
+        tailer      = '};\n'
+        ba          = bytearray()
+        ba.extend(header.encode())
+        ba.extend(aclLine.encode())
+        ba.extend(b'\n'.join(otherConfig))  # a list of bytes objects
+        ba.extend(b'\n')
+        ba.extend(tailer.encode())
+        ba.extend(b'\n')
+        ofile.write(bytes(ba))
+
+    def save(self, dbFile):
+        """ Save the group data to a database file.
+        Views with LESS acl shall be put in front of
+        the one which is GREATER.
+        """
+        ofile = open(dbFile, 'wb')
+        for viewList in self.outData['ordered'].values():
+            for view in viewList:
+                self.writeOneView(view, ofile)
+        for view in self.outData['free']:
+            self.writeOneView(view, ofile)
+
+        ofile.seek(-1, 1)   # back one character for
+        ofile.truncate()    # removing the last empty line
