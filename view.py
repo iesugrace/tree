@@ -97,6 +97,24 @@ class ViewGroup:
             another.
     """
 
+    def __init__(self):
+        """
+        self.data holds all unprocessed views.
+        self.outData holds all ready-for-output views.
+        self.outData['free'] holds all views that have
+            no LESS or GREATER relationship with others.
+        self.outData['ordered'] holds multiple lists,
+            each list is a group of views which must be
+            ordered. The key of this dictionary is the
+            viewName of an arbitrary view in the list,
+            the characters of the key does not matter,
+            the uniqueness does.
+        """
+        self.data               = []
+        self.outData            = {}
+        self.outData['free']    = set()
+        self.outData['ordered'] = {}
+
     def load(self, dbFile, ignore_syntax=True):
         """ Load data from a database, the existing data of the group
         will be abandoned.
