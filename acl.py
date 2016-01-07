@@ -215,7 +215,7 @@ class AclGroup(TreeGroup):
     give a chance for this class to validate the ACLs.
     """
 
-    def load(self, dbFile, ignore_syntax=True):
+    def load(self, dbFile, ignore_syntax=True, remove_conflict=False):
         """ Load data from a database, the existing data of the group
         will be abandoned. Add in this manner: for each ACL, add all
         its networks to the group, and link all its networks with it,
@@ -277,7 +277,8 @@ class AclGroup(TreeGroup):
             # remove redundant networks before adding
             acl.removeRedundant()
             self.addAcl(acl)
-        self.removeConflicts()
+        if remove_conflict:
+            self.removeConflicts()
 
     def checkSyntax(self, dbFile):
         """ Check if all lines in dbFile conforms to the rules.
