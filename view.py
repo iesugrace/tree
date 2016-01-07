@@ -54,7 +54,7 @@ class View:
         if not re.match(b'\s*match-clients\s', acl_line):
             raise InvalidViewConfigException
         rest_lines = lines[1:]
-        aclName    = acl_line.split(b';')[-3].decode()
+        aclName    = acl_line.split(b';')[-3].decode().strip()
         return (aclName, rest_lines)
 
 
