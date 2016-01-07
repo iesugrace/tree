@@ -465,7 +465,7 @@ class AclGroup(TreeGroup):
             # networks
             nets = [x for x in node.childNodes if isinstance(x, Network)]
             for net in nets:
-                sub_text = '%s%s;' % (prefix, net.name)
+                sub_text = '%s%s %s;' % (prefix, 'ecs', net.name)
                 if net.comment:
                     text.extend(sub_text.encode() + b' ' +  net.comment + b'\n')
                 else:
