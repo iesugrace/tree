@@ -170,6 +170,63 @@ class Acl(Branch):
         else:
             return Acl.OTHER
 
+    @staticmethod
+    def splitTree(nets):
+        """ For every network in the 'nets', split all ACLs
+        in the line from the network up to the 'TOP' which
+        has no parent.
+
+        Example: Split net1, net3, net5, net6 out.
+
+        Before:                     After:
+
+        net1──┐                     net2──C0──A0──┐
+              │                                   │
+        net2──C──A──┐               net4──D0──B0──┴─TOP0
+                    │
+        net3──┐     ├─TOP           net1──C1──A1──┬─TOP1
+              │     │                             │
+        net4──D──B──┤               net3──D1──B1──┤
+              │     │                     │       │
+        net5──┘     │               net5──┘       │
+              net6──┘                       net6──┘
+
+        """
+        new_acls = {}
+        res_acls = []
+        for net in nets:
+            node   = net
+            parent = node.parent
+            while True:         # split all parents up the line
+                if len(parent.childNodes) == 1:
+                    node   = parent
+                    parent = node.parent
+                    continue
+                if parent.name[-2:] == '-0':
+                    # when process another net in the same
+                    # method call, branch1 may already be
+                    # created when processed a previous net.
+                    branch1_name = parent.name[:-1] + '1'
+                    if branch1_name in new_acls:
+                        new_acls[branch1_name].moveChild(node)
+                        break
+                # split
+                branch1_name = parent.name + '-1'
+                branch1 = Acl(branch1_name)
+                branch1.moveChild(node)
+                new_acls[branch1.name] = branch1 # another net may want it
+                branch0_name = parent.name + '-0'
+                parent.rename(branch0_name)
+                branch0 = parent
+                node   = branch1
+                parent = branch0.parent
+                if parent:
+                    parent.attachChild(branch1)
+                else:   # splitting hit the top, done
+                    res_acls = [branch0, branch1]
+                    break
+        return res_acls
+
 
 class AclDbFormat:
     """ Define the acceptable format of
@@ -392,12 +449,12 @@ class AclGroup(TreeGroup):
                 nets = g[1] if len(g[1]) < len(g[2]) else g[2]
 
                 if acl == acl_obj: # split the new
-                    new_acls = self.splitAclTree(acl, nets)
+                    new_acls = Acl.splitTree(nets)
                     for new_acl in new_acls:
                         acls[new_acl.name] = new_acl
                 else:   # split the old
                     old_acl_name = acl.name # get name befor split
-                    old_acl0, old_acl1 = self.splitAclTree(acl, nets)
+                    old_acl0, old_acl1 = Acl.splitTree(nets)
                     self.data.pop(old_acl_name)
                     self.data[old_acl0.name] = old_acl0
                     self.data[old_acl1.name] = old_acl1
@@ -413,61 +470,6 @@ class AclGroup(TreeGroup):
         self.data = {}
         for acl in acls:
             self.addAcl(acl, self.aclValidator, (self.data,))
-
-    def splitAclTree(self, top_acl, nets):
-        """ For every network in the 'nets', split all ACLs
-        in the line from the network up to the 'top_acl'.
-
-        Example: Split net1, net3, net5, net6 out.
-
-        Before:                     After:
-
-        net1──┐                     net2──C0──A0──┐
-              │                                   │
-        net2──C──A──┐               net4──D0──B0──┴─TOP0
-                    │
-        net3──┐     ├─TOP           net1──C1──A1──┬─TOP1
-              │     │                             │
-        net4──D──B──┤               net3──D1──B1──┤
-              │     │                     │       │
-        net5──┘     │               net5──┘       │
-              net6──┘                       net6──┘
-
-        """
-        new_acls = {}
-        res_acls = []
-        for net in nets:
-            node   = net
-            parent = node.parent
-            while True:         # split all parents up the line
-                if len(parent.childNodes) == 1:
-                    node   = parent
-                    parent = node.parent
-                    continue
-                if parent.name[-2:] == '-0':
-                    # when process another net in the same
-                    # method call, branch1 may already be
-                    # created when processed a previous net.
-                    branch1_name = parent.name[:-1] + '1'
-                    if branch1_name in new_acls:
-                        new_acls[branch1_name].moveChild(node)
-                        break
-                # split
-                branch1_name = parent.name + '-1'
-                branch1 = Acl(branch1_name)
-                branch1.moveChild(node)
-                new_acls[branch1.name] = branch1 # another net may want it
-                branch0_name = parent.name + '-0'
-                parent.rename(branch0_name)
-                branch0 = parent
-                node   = branch1
-                parent = branch0.parent
-                if parent:
-                    parent.attachChild(branch1)
-                else:   # splitting hit the top, done
-                    res_acls = [branch0, branch1]
-                    break
-        return res_acls
 
     def save(self, dbFile):
         """ Save the group data to a database file.
