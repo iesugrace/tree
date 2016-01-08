@@ -291,6 +291,97 @@ class ViewGroup:
                 newViews[newView.name] = newView
         return newViews
 
+    def insertView(self, newView):
+        """ Find a good location in the self.outData, and
+        insert the view into it.
+
+        This is the core mechanism that ensures a logically
+        correct view database. The rule is: IF ANY VIEW'S
+        ACL OVERLAPS OTHER VIEW'S, THE VIEW OF THE LESS ACL
+        SHALL BE PLACED FIRST, THEN THE GREATER ONE.
+
+        If it's impossible to pick a location that complies
+        to the order rule, raise an exception. It's possible
+        that the exception raised halfway at which point
+        some views may had already been moved from their
+        original position, thus corrupt the view group, to
+        prevent it, we make shallow copies of the groups,
+        and process the copies, after all existing views had
+        been processed, we update the view group with the
+        processed copies.
+
+        If a list in the orderedGroups has a view LESS or
+        GREATER than the newView, the same will be deleted,
+        all views in it will be moved to a new list. If a
+        view in the freeViews group LESS or GREATER than
+        the newView, the same will be moved to a new list.
+        """
+        freeViews     = list(self.outData['free'])
+        orderedGroups = [list(l) for l in self.outData['ordered']]
+        intactGroups  = []  # holds the view lists that have
+                            # no relationship with the newView
+        globalL       = []  # holds all views that LESS than the newView
+        globalR       = []  # holds all views that GREATER than the newView
+        newAcl        = self.acls[newView.aclName]
+
+        # the free category
+        lGroup    = []
+        gGroup    = []
+        for existView in freeViews:
+            existAcl = self.acls[existView.aclName]
+            rela     = existAcl.compare(newAcl)
+            if rela == Acl.LESS:
+                lGroup.append(existView)
+            elif rela == Acl.GREATER:
+                gGroup.append(existView)
+        for v in (lGroup + gGroup):
+            freeViews.remove(v)
+        globalL.extend(lGroup)
+        globalR.extend(gGroup)
+
+        # the ordered category
+        for viewList in orderedGroups:
+            lessLen = 0
+            lGroup  = []
+            gGroup  = []
+            for existView in viewList:
+                existAcl = self.acls[existView.aclName]
+                rela     = existAcl.compare(newAcl)
+                if rela == Acl.LESS:
+                    lessLen += 1
+                elif rela == Acl.GREATER:
+                    lGroup = viewList[:lessLen]
+                    gGroup = viewList[lessLen:]
+                else:
+                    lessLen += 1
+            # at this point, all views in the lGroup are
+            # LESS than the newView (its acl actually), but
+            # in the gGroup, only the first of it is GREATER
+            # than the newView, all subsequent ones are
+            # undetermined. The next step is to found out if
+            # there is any view in the gGroup that is LESS
+            # than the newView, in which case we will raise
+            # an exception because the rule is violated.
+            for existView in gGroup:
+                existAcl = self.acls[existView.aclName]
+                rela     = existAcl.compare(newAcl)
+                if rela == Acl.LESS:
+                    raise ViewOrderException
+            if len(lGroup) == 0 and len(gGroup) == 0:
+                intactGroups.append(viewList)
+            else:
+                globalL.extend(lGroup)
+                globalR.extend(gGroup)
+
+        if len(globalL) == 0 and len(globalR) == 0:
+            self.outData['free'].append(newView)
+        else:
+            self.outData['free'] = freeViews
+            self.outData['ordered'] = []
+            self.outData['ordered'].extend(intactGroups)
+            newList = globalL + [newView] + globalR
+            self.outData['ordered'].append(newList)
+
     def enforceRules(self, views):
         """ Raise an exception if any violation detected
         Rules:
