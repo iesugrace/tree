@@ -247,3 +247,15 @@ class ViewGroup:
 
         ofile.seek(-1, 1)   # back one character for
         ofile.truncate()    # removing the last empty line
+
+    def enforceRules(self, views):
+        """ Raise an exception if any violation detected
+        Rules:
+        - Only top acl can be referenced by a view,
+          top acl is the one has no parent.
+        """
+        aclNames   = [x.aclName for x in views]
+        aclObjects = [self.acls[x] for x in aclNames]
+        m = [x for x in aclObjects if x.parent is not None]
+        # zero length means no violation
+        assert (len(x) == 0), "view config not complies with the rules"
