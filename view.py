@@ -111,11 +111,11 @@ class ViewGroup:
             the uniqueness does.
         self.acls is the acl data the views will use.
         """
-        self.data               = []
+        self.data               = {}
         self.outData            = {}
         self.outData['free']    = set()
         self.outData['ordered'] = {}
-        self.acls               = acls
+        self.attachAclDb(acls)
 
     def attachAclDb(self, acls):
         """ Add the acl database for the ViewGroup to use
