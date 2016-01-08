@@ -241,9 +241,6 @@ class ViewGroup:
         for view in self.outData['free']:
             self.writeOneView(view, ofile)
 
-        ofile.seek(-1, 1)   # back one character for
-        ofile.truncate()    # removing the last empty line
-
     def resolveViewsParts(self):
         """ Find out all views whose acl is missing (been
         split), and find out all parts of that old acl,
