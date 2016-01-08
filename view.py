@@ -411,4 +411,4 @@ class ViewGroup:
         aclObjects = [self.acls[x] for x in aclNames]
         m = [x for x in aclObjects if x.parent is not None]
         # zero length means no violation
-        assert (len(x) == 0), "view config not complies with the rules"
+        assert (len(m) == 0), "view config not complies with the rules"
