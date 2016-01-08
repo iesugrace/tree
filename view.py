@@ -111,7 +111,7 @@ class ViewGroup:
             does.
         self.acls is the acl data the views will use.
         """
-        self.data               = {}
+        self.data               = []
         self.outData            = {}
         self.outData['free']    = []
         self.outData['ordered'] = []
@@ -133,7 +133,7 @@ class ViewGroup:
         """ Load data from a database, the existing data of the group
         will be abandoned.
         """
-        self.data = {}
+        self.data = []
         viewBlocks = self.preproc(dbFile)
         for block in viewBlocks:
             lines = block.split(b'\n')
@@ -163,7 +163,7 @@ class ViewGroup:
             view  = e.args[0]
             print('duplicate view: %s' % view.name, file=sys.stderr)
         else:
-            self.data[view.name] = view
+            self.data.append(view)
             return True
 
     def defaultValidator(self, view, group):
@@ -246,16 +246,15 @@ class ViewGroup:
         split), and find out all parts of that old acl,
         create a new view for each part of it.
         """
-        views = [x for x in self.data.values() if x.aclName not in self.acls]
+        views = [x for x in self.data if x.aclName not in self.acls]
         for view in views:
             newViews = self.resolveOneViewParts(view)
             if not newViews:
                 print("%s's acl %s is missing" % (view.name, view.aclName),
                         file=sys.stderr)
             else:
-                self.data.pop(view.name)
-                for k, v in newViews.items():
-                    self.data[k] = v
+                self.data.remove(view)
+                self.data.extend(newViews)
 
     def resolveOneViewParts(self, view):
         """ A view's acl may be split into parts in a
@@ -281,11 +280,11 @@ class ViewGroup:
         """
         flag     = view.aclName + '-'
         names    = [x for x in self.acls if x.startswith(flag)]
-        newViews = {}
+        newViews = []
         if len(names) > 1:
             for aclName in names:
                 newView = View(aclName, aclName, view.otherConfig)
-                newViews[newView.name] = newView
+                newViews.append(newView)
         return newViews
 
     def insertView(self, newView):
