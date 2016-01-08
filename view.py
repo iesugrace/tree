@@ -147,6 +147,7 @@ class ViewGroup:
             otherConfig = parsed[1]
             view = View(view_name, aclName, otherConfig)
             self.addView(view)
+        self.resolveViewsParts()
 
     def addView(self, begin_view, validator=None, args=None):
         """ Add the view to the group. Duplicate name of view
@@ -253,6 +254,53 @@ class ViewGroup:
 
         ofile.seek(-1, 1)   # back one character for
         ofile.truncate()    # removing the last empty line
+
+    def resolveViewsParts(self):
+        """ Find out all views whose acl is missing (been
+        split), and find out all parts of that old acl,
+        create a new view for each part of it.
+        """
+        views = [x for x in self.data.values() if x.aclName not in self.acls]
+        for view in views:
+            newViews = self.resolveOneViewParts(view)
+            if not newViews:
+                print("%s's acl %s is missing" % (view.name, view.aclName),
+                        file=sys.stderr)
+            else:
+                self.data.pop(view.name)
+                for k, v in newViews.items():
+                    self.data[k] = v
+
+    def resolveOneViewParts(self, view):
+        """ A view's acl may be split into parts in a
+        previous operation. This method finds out all
+        new acls of the old one, and creates new views
+        for each of these new acls, returns a list of
+        the new views.
+
+        If an acl been broken into parts, the name is
+        changed like this:
+
+            oldacl --> oldacl-0
+                       oldacl-1 --> oldacl-1-0
+                                    oldacl-1-1
+
+        The new views have different name and aclName
+        comparing to the old view, but the MySQL
+        statement is identical, since these different
+        views all use the same data in the database.
+
+        This method shall not be call if the acl which
+        the 'view' connects already exists in self.acls.
+        """
+        flag     = view.aclName + '-'
+        names    = [x for x in self.acls if x.startswith(flag)]
+        newViews = {}
+        if len(names) > 1:
+            for aclName in names:
+                newView = View(aclName, aclName, view.otherConfig)
+                newViews[newView.name] = newView
+        return newViews
 
     def enforceRules(self, views):
         """ Raise an exception if any violation detected
