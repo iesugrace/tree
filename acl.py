@@ -388,16 +388,16 @@ class AclGroup(TreeGroup):
                     g = (acl_obj, l_n_nets, g_n_nets)
                 else:
                     g = (old_acl, l_o_nets, g_o_nets)
-                acl = g[0]
-                net = g[1] if len(g[1]) < len(g[2]) else g[2]
+                acl  = g[0]
+                nets = g[1] if len(g[1]) < len(g[2]) else g[2]
 
                 if acl == acl_obj: # split the new
-                    new_acls = self.splitAclTree(acl, net)
+                    new_acls = self.splitAclTree(acl, nets)
                     for new_acl in new_acls:
                         acls[new_acl.name] = new_acl
                 else:   # split the old
                     old_acl_name = acl.name # get name befor split
-                    old_acl0, old_acl1 = self.splitAclTree(acl, net)
+                    old_acl0, old_acl1 = self.splitAclTree(acl, nets)
                     self.data.pop(old_acl_name)
                     self.data[old_acl0.name] = old_acl0
                     self.data[old_acl1.name] = old_acl1
