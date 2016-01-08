@@ -102,19 +102,19 @@ class ViewGroup:
         self.data holds all unprocessed views.
         self.outData holds all ready-for-output views.
         self.outData['free'] holds all views that have
-            no LESS or GREATER relationship with others.
+            no LESS or GREATER relationship with others,
+            the order of it does not matter.
         self.outData['ordered'] holds multiple lists,
             each list is a group of views which must be
-            ordered. The key of this dictionary is the
-            viewName of an arbitrary view in the list,
-            the characters of the key does not matter,
-            the uniqueness does.
+            ordered. The order of the lists does not
+            matter, but the order of views in each list
+            does.
         self.acls is the acl data the views will use.
         """
         self.data               = {}
         self.outData            = {}
-        self.outData['free']    = set()
-        self.outData['ordered'] = {}
+        self.outData['free']    = []
+        self.outData['ordered'] = []
         self.attachAclDb(acls)
 
     def attachAclDb(self, acls):
@@ -235,7 +235,7 @@ class ViewGroup:
         the one which is GREATER.
         """
         ofile = open(dbFile, 'wb')
-        for viewList in self.outData['ordered'].values():
+        for viewList in self.outData['ordered']:
             for view in viewList:
                 self.writeOneView(view, ofile)
         for view in self.outData['free']:
