@@ -149,33 +149,22 @@ class ViewGroup:
             self.addView(view)
         self.resolveViewsParts()
 
-    def addView(self, begin_view, validator=None, args=None):
+    def addView(self, view, validator=None, vpargs=(), vkargs={}):
         """ Add the view to the group. Duplicate name of view
         will be ignored.
         """
-        views = {begin_view.name: begin_view}
-        while views:
-            view_name = list(views.keys())[0]
-            view_obj  = views.pop(view_name)
-            try:
-                if validator:
-                    self.__addView(view_obj, validator, args)
-                else:
-                    self.__addView(view_obj)   # default validator
-            except ViewExistsException as e:
-                obj  = e.args[0]
-                print('duplicate view: %s' % obj_name, file=sys.stderr)
-            except NotCoexistsException as e:   # split and retry
-                pass
-
-    def __addView(self, obj, validator=None, vpargs=(), vkargs={}):
         if not validator:
             validator = self.defaultValidator
             vpargs    = (self.data,)
             vkargs    = {}
-        validator(obj, *vpargs, **vkargs)  # may raise an exception
-        self.data[obj.name] = obj
-        return True
+        try:
+            validator(view, *vpargs, **vkargs)
+        except ViewExistsException as e:
+            view  = e.args[0]
+            print('duplicate view: %s' % view.name, file=sys.stderr)
+        else:
+            self.data[view.name] = view
+            return True
 
     def defaultValidator(self, view, group):
         """ Default validator of the ViewGroup
