@@ -118,9 +118,15 @@ class ViewGroup:
         self.acls               = acls
 
     def attachAclDb(self, acls):
-        """ The acls is a dictionary, key is the
-        acl name, value is the acl object.
+        """ Add the acl database for the ViewGroup to use
+        The acls is a dictionary, the key is the acl name,
+        and the value is the acl object. The view database
+        usually make use of a preset acl named 'ANY' for
+        default selection, here we ensure that acl exists.
         """
+        anyName = 'ANY'
+        if anyName not in acls:
+            acls[anyName] = Acl(anyName)
         self.acls = acls
 
     def load(self, dbFile, ignore_syntax=True):
