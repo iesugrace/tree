@@ -85,6 +85,10 @@ class Network(Leaf):
 class Acl(Branch):
     """ Represents an ACL. An ACL contains one or more networks.
     """
+    LESS        = -1
+    OTHER       = 0
+    GREATER     = 1
+
     def networks(self):
         """ Return a non-redundant list of networks of the ACL.
         An ACL of the following networks:
@@ -139,6 +143,32 @@ class Acl(Branch):
         uniqNets      = self.directUniqNetworks()
         directSubAcls = [x for x in self.childNodes if isinstance(x, Acl)]
         self.childNodes = directSubAcls + uniqNets
+
+    def compare(self, acl):
+        """ Compare self with the given acl, return
+        Acl.LESS if self is covered by the acl
+        Acl.GREATER if self covers the acl
+        Acl.OTHER if the two are the same,
+                  or has no common portion
+        """
+        l_rela    = []
+        g_rela    = []
+        networks1 = self.networks()
+        networks2 = acl.networks()
+        for net1 in networks1:
+            for net2 in networks2:
+                r = net1.compare(net2)
+                if r == Network.GREATER:
+                    g_rela.append((net1, net2))
+                elif r == Network.LESS:
+                    l_rela.append((net1, net2))
+        assert not (len(l_rela) and len(g_rela)), "Acl database error"
+        if len(l_rela):
+            return Acl.LESS
+        elif len(g_rela):
+            return Acl.GREATER
+        else:
+            return Acl.OTHER
 
 
 class AclDbFormat:
