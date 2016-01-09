@@ -1,0 +1,29 @@
+#!/usr/bin/env python3
+"""
+Author: Joshua Chen
+Date: 2016-01-09
+Location: Shenzhen
+Desc: DNS view manager, process the view database and
+      acl database, correct acl conflicts, order view
+      entries, produce logically correct (not only
+      syntactically) DNS view config and acl config.
+"""
+
+from acl import *
+from view import *
+import sys, os
+
+def help():
+    bname = os.path.basename(sys.argv[0])
+    text = """Usage:
+    %s check-acl <acl-file>
+    %s fix-acl <acl-file> <new-acl-file>
+    %s check-view [--aclok] <view-file> <acl-file>
+    %s fix-view [--aclok] <view-file> <acl-file> <new-view-file> <new-acl-file>
+    %s add-net <net> <view> <view-file> <acl-file>"""
+    text = text % ((bname,) * 5)
+    print(text)
+
+
+if __name__ == '__main__':
+    help()
