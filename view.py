@@ -385,7 +385,9 @@ class ViewGroup:
                 existAcl = self.acls[existView.aclName]
                 rela     = existAcl.compare(newAcl)
                 if rela == Acl.LESS:
-                    raise ViewOrderException
+                    # attach the greater nets of the newAcl for split
+                    nets = self.getNets(newAcl, existAcl, Network.GREATER)
+                    raise ViewOrderException(nets)
             if len(lGroup) == 0 and len(gGroup) == 0:
                 intactGroups.append(viewList)
             else:
@@ -400,6 +402,21 @@ class ViewGroup:
             self.outData['ordered'].extend(intactGroups)
             newList = globalL + [newView] + globalR
             self.outData['ordered'].append(newList)
+
+    def getNets(self, acl1, acl2, relation):
+        """ Compare acl1 and acl2, and find all networks
+        in acl1 that has 'relation' relationship with
+        networks in acl2.
+        """
+        nets  = []
+        nets1 = acl1.networks()
+        nets2 = acl2.networks()
+        for net1 in nets1:
+            for net2 in nets2:
+                if relation == net1.compare(net2):
+                    nets.append(net1)
+                    break
+        return nets
 
     def enforceRules(self, views):
         """ Raise an exception if any violation detected
