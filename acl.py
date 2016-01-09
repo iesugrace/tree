@@ -471,10 +471,12 @@ class AclGroup(TreeGroup):
         for acl in acls:
             self.addAcl(acl, self.aclValidator, (self.data,))
 
-    def save(self, dbFile):
+    @staticmethod
+    def save(heads, dbFile):
         """ Save the group data to a database file.
         for nested ACL, output the inner one, then
-        the outer one.
+        the outer one. The provided 'heads' are the
+        top ACLs in the AclGroup.
         """
         def format_node(node):
             """ Format the node's data, return a bytes
@@ -520,7 +522,6 @@ class AclGroup(TreeGroup):
             for subacl in subacls:
                 format_acl(subacl, queue)
 
-        heads = [v for k, v in self.data.items() if not v.parent]
         ofile = open(dbFile, 'wb')
         for head in heads:
             queue = []
