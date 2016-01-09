@@ -287,7 +287,7 @@ class ViewGroup:
                 newViews.append(newView)
         return newViews
 
-    def placeView(self, begin_view):
+    def placeView(self, begin_view, verbose=False):
         """ Place the view to an appropricate location,
         according to the order rule. On failure, split
         the view and its acl, and start over.
@@ -296,19 +296,21 @@ class ViewGroup:
         while views:
             viewName = list(views.keys())[0]
             viewObj  = views.pop(viewName)
+            if verbose:
+                print("placing %s" % viewName)
             try:
                 self.insertView(viewObj)
             except ViewOrderException as e:     # split and retry
                 nets = e.args[0]
                 oldAclName = viewObj.aclName    # get name befor split
                 oldAcl0, oldAcl1 = Acl.splitTree(nets)
-                self.acls.pop(old_acl_name)     # remove the old name
+                self.acls.pop(oldAclName)       # remove the old name
                 self.acls[oldAcl0.name] = oldAcl0
                 self.acls[oldAcl1.name] = oldAcl1
                 for suffix, aclName in [('-0', oldAcl0.name), ('-1', oldAcl1.name)]:
-                    viewName += suffix
-                    newView = View(viewName, aclName, viewObj.otherConfig)
-                    views[viewName] = newView
+                    name        = viewName + suffix
+                    newView     = View(name, aclName, viewObj.otherConfig)
+                    views[name] = newView
 
     def insertView(self, newView):
         """ Find a good location in the self.outData, and
