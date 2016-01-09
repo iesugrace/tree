@@ -287,6 +287,14 @@ class ViewGroup:
                 newViews.append(newView)
         return newViews
 
+    def order(self):
+        """ Sort all views in the group
+        """
+        views = list(self.data)
+        self.enforceRules(views)
+        for view in views:
+            self.placeView(view)
+
     def placeView(self, begin_view, verbose=False):
         """ Place the view to an appropricate location,
         according to the order rule. On failure, split
