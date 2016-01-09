@@ -302,7 +302,7 @@ class AclGroup(TreeGroup):
     give a chance for this class to validate the ACLs.
     """
 
-    def load(self, dbFile, ignore_syntax=True, remove_conflict=False):
+    def load(self, dbFile, ignore_syntax=True, remove_conflict=True):
         """ Load data from a database, the existing data of the group
         will be abandoned. Add in this manner: for each ACL, add all
         its networks to the group, and link all its networks with it,
