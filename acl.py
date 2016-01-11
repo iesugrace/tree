@@ -431,34 +431,39 @@ class AclGroup(TreeGroup):
                 offended_info = '%s:%s' % (obj.lineNumber, obj_name)
                 print('duplicate acl: %s, %s:%s' %
                         (offended_info, acl_obj.lineNumber, acl_name), file=sys.stderr)
-            except NotCoexistsException as e:   # split and retry
-                # pick the least acls/efforts nets
-                less_rela, greater_rela = e.args[0]
-                l_n_nets = set([x[0] for x in less_rela])   # nets of new acl in LESS group
-                l_o_nets = set([x[1] for x in less_rela])   # nets of old acl in LESS group
-                g_n_nets = set([x[0] for x in greater_rela])
-                g_o_nets = set([x[1] for x in greater_rela])
-                old_acl  = e.args[1]
-                count_new = len(self.parentsOfNets(l_n_nets))   # parents of new acl
-                count_old = len(self.parentsOfNets(l_o_nets))   # parents of old acl
-                if count_new < count_old:
-                    g = (acl_obj, l_n_nets, g_n_nets)
-                else:
-                    g = (old_acl, l_o_nets, g_o_nets)
-                acl  = g[0]
-                nets = g[1] if len(g[1]) < len(g[2]) else g[2]
+            except NotCoexistsException as e:   # call the handler to split
+                self.coexistExceptionHandler(e=e, new_acl=acl_obj, acls=acls)
 
-                if acl == acl_obj: # split the new
-                    new_acls = Acl.splitTree(nets)
-                    for new_acl in new_acls:
-                        acls[new_acl.name] = new_acl
-                else:   # split the old
-                    old_acl_name = acl.name # get name befor split
-                    old_acl0, old_acl1 = Acl.splitTree(nets)
-                    self.data.pop(old_acl_name)
-                    self.data[old_acl0.name] = old_acl0
-                    self.data[old_acl1.name] = old_acl1
-                    acls[acl_name] = acl_obj
+    def coexistExceptionHandler(self, *junk, e, new_acl, acls):
+        """ Handler for coexist exception, to split the acl
+        """
+        # pick the least acls/efforts nets
+        less_rela, greater_rela = e.args[0]
+        l_n_nets = set([x[0] for x in less_rela])   # nets of new acl in LESS group
+        l_o_nets = set([x[1] for x in less_rela])   # nets of old acl in LESS group
+        g_n_nets = set([x[0] for x in greater_rela])
+        g_o_nets = set([x[1] for x in greater_rela])
+        old_acl  = e.args[1]
+        count_new = len(self.parentsOfNets(l_n_nets))   # parents of new acl
+        count_old = len(self.parentsOfNets(l_o_nets))   # parents of old acl
+        if count_new < count_old:
+            g = (new_acl, l_n_nets, g_n_nets)
+        else:
+            g = (old_acl, l_o_nets, g_o_nets)
+        acl  = g[0]
+        nets = g[1] if len(g[1]) < len(g[2]) else g[2]
+
+        if acl == new_acl: # split the new
+            new_acls = Acl.splitTree(nets)
+            for new_acl in new_acls:
+                acls[new_acl.name] = new_acl
+        else:   # split the old
+            old_acl_name = acl.name # get name befor split
+            old_acl0, old_acl1 = Acl.splitTree(nets)
+            self.data.pop(old_acl_name)
+            self.data[old_acl0.name] = old_acl0
+            self.data[old_acl1.name] = old_acl1
+            acls[new_acl.name] = new_acl
 
     def removeConflicts(self):
         """ Re-add all ACLs again to deal with the coexistent
