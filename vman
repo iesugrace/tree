@@ -13,10 +13,49 @@ from acl import *
 from view import *
 import sys, os
 
+def checkAcl(args):
+    """ Load the acl database, check if its syntax is
+    good, and if all Acls can exists with each other.
+    """
+    verbose = 0
+    path    = None
+    while args:
+        arg = args.pop(0)
+        if arg == '-v':
+            verbose = 1
+        else:
+            path = arg
+
+    assert path is not None
+
+    g = AclGroup()
+    def customHandler(*junk, e, new_acl, acls):
+        old_acl = e.args[1]
+        new_acl_name = new_acl.name
+        old_acl_name = old_acl.name
+        print("coexist problem: %s:%s <---> %s:%s" %
+                (new_acl.lineNumber, new_acl_name,
+                 old_acl.lineNumber, old_acl_name),
+                file=sys.stderr)
+        leftLen = max(len(new_acl_name), 17)
+        headFormat = "%%%ss       %%s" % leftLen
+        netFormat  = "%%%ss  %%s  %%s" % leftLen
+        if verbose >= 1:  # show the problematic networks
+            less_rela, greater_rela = e.args[0]
+            print(headFormat % (new_acl_name, old_acl_name))
+            for net1, net2 in less_rela:
+                print(netFormat % (net1, '<  ', net2))
+            for net1, net2 in greater_rela:
+                print(netFormat % (net1, '  >', net2))
+
+    g.coexistExceptionHandler = customHandler
+    g.load(path, remove_conflict=True)
+
+
 def help():
     bname = os.path.basename(sys.argv[0])
     text = """Usage:
-    %s check-acl <acl-file>
+    %s check-acl [-v] <acl-file>
     %s fix-acl <acl-file> <new-acl-file>
     %s check-view [--aclok] <view-file> <acl-file>
     %s fix-view [--aclok] <view-file> <acl-file> <new-view-file> <new-acl-file>
@@ -26,4 +65,26 @@ def help():
 
 
 if __name__ == '__main__':
-    help()
+    if len(sys.argv) < 2:
+        help()
+        exit(1)
+    cmd  = sys.argv[1]
+    args = sys.argv[2:]
+    try:
+        if cmd == "check-acl":
+            checkAcl(args)
+        elif cmd == "fix-acl":
+            fixAcl(args)
+        elif cmd == "check-view":
+            checkView(args)
+        elif cmd == "fix-view":
+            fixView(args)
+        elif cmd == "add-net":
+            addNet(args)
+        else:
+            print("unrecognized command: %s" % cmd, file=sys.stderr)
+            help()
+            exit(1)
+    except AssertionError:
+        help()
+        exit(1)
