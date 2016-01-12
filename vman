@@ -63,8 +63,9 @@ def fixAcl(args):
         oldPath, newPath = args[:2]
     except:
         pass
-    assert oldPath != None and newPath != None, "expect two file paths"
-    assert os.path.realpath(oldPath) != os.path.realpath(oldPath), "two files are the same"
+    assert oldPath != None and newPath != None, "wrong arguments"
+    assert os.path.realpath(newPath) != os.path.realpath(oldPath), "two files are the same"
+    assert not os.path.exists(newPath), "destination already exists"
     g = AclGroup()
     g.load(oldPath, remove_conflict=True)
     heads = [v for v in g.data.values() if not v.parent]
