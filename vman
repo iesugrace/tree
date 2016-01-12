@@ -26,9 +26,10 @@ def checkAcl(args):
         else:
             path = arg
 
-    assert path is not None
+    assert path is not None, "expect a file path"
 
     g = AclGroup()
+    g.verbose = verbose
     def customHandler(*junk, e, new_acl, acls):
         old_acl = e.args[1]
         new_acl_name = new_acl.name
@@ -40,13 +41,13 @@ def checkAcl(args):
         leftLen = max(len(new_acl_name), 17)
         headFormat = "%%%ss       %%s" % leftLen
         netFormat  = "%%%ss  %%s  %%s" % leftLen
-        if verbose >= 1:  # show the problematic networks
+        if g.verbose >= 1:  # show the problematic networks
             less_rela, greater_rela = e.args[0]
-            print(headFormat % (new_acl_name, old_acl_name))
+            print(headFormat % (new_acl_name, old_acl_name), file=sys.stderr)
             for net1, net2 in less_rela:
-                print(netFormat % (net1, '<  ', net2))
+                print(netFormat % (net1, '<  ', net2), file=sys.stderr)
             for net1, net2 in greater_rela:
-                print(netFormat % (net1, '  >', net2))
+                print(netFormat % (net1, '  >', net2), file=sys.stderr)
 
     g.coexistExceptionHandler = customHandler
     g.load(path, remove_conflict=True)
