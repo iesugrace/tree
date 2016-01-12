@@ -97,6 +97,9 @@ class ViewGroup:
             another.
     """
 
+    # control how verbose the program will be
+    verbose = 0
+
     def __init__(self, acls=[]):
         """
         self.data holds all unprocessed views.
@@ -295,7 +298,7 @@ class ViewGroup:
         for view in views:
             self.placeView(view)
 
-    def placeView(self, begin_view, verbose=0):
+    def placeView(self, begin_view):
         """ Place the view to an appropricate location,
         according to the order rule. On failure, split
         the view and its acl, and start over.
@@ -304,11 +307,13 @@ class ViewGroup:
         while views:
             viewName = list(views.keys())[0]
             viewObj  = views.pop(viewName)
-            if verbose >= 1:
-                print("placing %s" % viewName)
+            if self.verbose >= 1:
+                print("placing view %s" % viewName)
             try:
                 self.insertView(viewObj)
             except ViewOrderException as e:     # split and retry
+                if self.verbose >= 1:
+                    print("splitting view %s" % viewName)
                 nets = e.args[0]
                 oldAclName = viewObj.aclName    # get name befor split
                 oldAcl0, oldAcl1 = Acl.splitTree(nets)
