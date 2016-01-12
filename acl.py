@@ -486,6 +486,11 @@ class AclGroup(TreeGroup):
         the outer one. The provided 'heads' are the
         top ACLs in the AclGroup.
         """
+        # remove the 'ANY' acl, sort the heads,
+        # the 'ANY' acl may be added by a view.
+        heads = [h for h in heads if h.name != 'ANY']
+        heads = sorted(heads, key=(lambda x: x.name))
+
         def format_node(node):
             """ Format the node's data, return a bytes
             """

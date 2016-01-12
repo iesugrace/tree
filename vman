@@ -126,10 +126,7 @@ def fixView(args):
     vg.load(viewPath)
     vg.order()
 
-    # remove the 'ANY' acl, sort the heads
-    aclHeads = [v for k, v in vg.acls.items() if v.parent is None and k != 'ANY']
-    aclHeads = sorted(aclHeads, key=(lambda x: x.name))
-
+    aclHeads = [v for k, v in vg.acls.items() if v.parent is None]
     AclGroup.save(aclHeads, newAclPath)
     vg.save(newViewPath)
 
