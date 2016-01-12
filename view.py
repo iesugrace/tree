@@ -100,7 +100,7 @@ class ViewGroup:
     # control how verbose the program will be
     verbose = 0
 
-    def __init__(self, acls=[]):
+    def __init__(self, acls={}):
         """
         self.data holds all unprocessed views.
         self.outData holds all ready-for-output views.
@@ -132,7 +132,7 @@ class ViewGroup:
             acls[anyName] = Acl(anyName)
         self.acls = acls
 
-    def load(self, dbFile, ignore_syntax=True):
+    def load(self, dbFile, resolveParts=True):
         """ Load data from a database, the existing data of the group
         will be abandoned.
         """
@@ -150,7 +150,8 @@ class ViewGroup:
             otherConfig = parsed[1]
             view = View(view_name, aclName, otherConfig)
             self.addView(view)
-        self.resolveViewsParts()
+        if resolveParts:
+            self.resolveViewsParts()
 
     def addView(self, view, validator=None, vpargs=(), vkargs={}):
         """ Add the view to the group. Duplicate name of view
