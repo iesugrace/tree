@@ -544,7 +544,7 @@ class AclGroup(TreeGroup):
         acl_group = [x for x in group.values() if isinstance(x, Acl)]
         for old_acl in acl_group:
             if self.verbose >= 1:
-                print('comparing acl %s with %s' % (new_acl.name, old_acl.name))
+                print('comparing acl: %s <---> %s' % (new_acl.name, old_acl.name))
             stat, relations = self.coexist(new_acl, old_acl)
             if not stat:
                 raise NotCoexistsException(relations, old_acl)
@@ -562,8 +562,6 @@ class AclGroup(TreeGroup):
         networks2 = acl2.networks()
         for net1 in networks1:
             for net2 in networks2:
-                if self.verbose >= 2:
-                    print('comparing network %s with %s' % (net1.name, net2.name))
                 r = net1.compare(net2)
                 if r == Network.GREATER:
                     g_rela.append((net1, net2))
