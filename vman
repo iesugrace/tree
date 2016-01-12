@@ -131,6 +131,47 @@ def fixView(args):
     vg.save(newViewPath)
 
 
+def addNet(args):
+    """ Add multiple networks to a view, Solve any acl
+    conflict and view order problem that caused by the
+    introduction of the new networks.
+    """
+    try:
+        viewPath, aclPath, viewName, *netNames = args
+    except:
+        raise Exception("wrong arguments")
+    assert len(netNames) != 0, "wrong arguments"
+
+    # load view database, no acls DB at this point,
+    # and parts are not resolved at this point.
+    vg = ViewGroup()
+    vg.load(viewPath, resolveParts=False)
+    aclName = [x.aclName for x in vg.data if x.name == viewName][0]
+
+    # load acl database
+    ag = AclGroup()
+    ag.load(aclPath, remove_conflict=False)
+
+    # add networks to the acl group
+    acl = ag.data[aclName]
+    for netName in netNames:
+        net = Network(netName)
+        if ag.addNetwork(net):
+            acl.attachChild(net)
+    acl.removeRedundant()
+    ag.removeConflicts()
+
+    # order the view data according to the new acl database
+    vg.attachAclDb(ag.data)
+    vg.resolveViewsParts()
+    vg.order()
+
+    # write out
+    aclHeads = [v for k, v in vg.acls.items() if v.parent is None]
+    AclGroup.save(aclHeads, aclPath)
+    vg.save(viewPath)
+
+
 def help():
     bname = os.path.basename(sys.argv[0])
     text = """Usage:
@@ -138,7 +179,7 @@ def help():
     %s fix-acl <acl-file> <new-acl-file>
     %s check-view [--aclok] <view-file> <acl-file>
     %s fix-view [--aclok] <view-file> <acl-file> <new-view-file> <new-acl-file>
-    %s add-net <net> <view> <view-file> <acl-file>"""
+    %s add-net <view-file> <acl-file> <view> <net>..."""
     text = text % ((bname,) * 5)
     print(text)
 
