@@ -102,6 +102,38 @@ def checkView(args):
     exit(state)
 
 
+def fixView(args):
+    """ Fix the order of views, split them if necessary,
+    fix acl also if required.
+    """
+    fixAcl = True
+    paths    = []
+    while args:
+        arg = args.pop(0)
+        if arg == '--aclok':
+            fixAcl = False
+        else:
+            paths.append(arg)
+
+    assert len(paths) == 4, "wrong arguments"
+    viewPath, aclPath, newViewPath, newAclPath = paths
+    assert not os.path.exists(newViewPath), "view destination already exists"
+    assert not os.path.exists(newAclPath), "acl destination already exists"
+
+    ag = AclGroup()
+    ag.load(aclPath, remove_conflict=fixAcl)
+    vg = ViewGroup(acls=ag.data)
+    vg.load(viewPath)
+    vg.order()
+
+    # remove the 'ANY' acl, sort the heads
+    aclHeads = [v for k, v in vg.acls.items() if v.parent is None and k != 'ANY']
+    aclHeads = sorted(aclHeads, key=(lambda x: x.name))
+
+    AclGroup.save(aclHeads, newAclPath)
+    vg.save(newViewPath)
+
+
 def help():
     bname = os.path.basename(sys.argv[0])
     text = """Usage:
