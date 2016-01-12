@@ -295,7 +295,7 @@ class ViewGroup:
         for view in views:
             self.placeView(view)
 
-    def placeView(self, begin_view, verbose=False):
+    def placeView(self, begin_view, verbose=0):
         """ Place the view to an appropricate location,
         according to the order rule. On failure, split
         the view and its acl, and start over.
@@ -304,7 +304,7 @@ class ViewGroup:
         while views:
             viewName = list(views.keys())[0]
             viewObj  = views.pop(viewName)
-            if verbose:
+            if verbose >= 1:
                 print("placing %s" % viewName)
             try:
                 self.insertView(viewObj)
