@@ -314,16 +314,21 @@ class ViewGroup:
             except ViewOrderException as e:     # split and retry
                 if self.verbose >= 1:
                     print("splitting view %s" % viewName)
-                nets = e.args[0]
-                oldAclName = viewObj.aclName    # get name befor split
-                oldAcl0, oldAcl1 = Acl.splitTree(nets)
-                self.acls.pop(oldAclName)       # remove the old name
-                self.acls[oldAcl0.name] = oldAcl0
-                self.acls[oldAcl1.name] = oldAcl1
-                for suffix, aclName in [('-0', oldAcl0.name), ('-1', oldAcl1.name)]:
-                    name        = viewName + suffix
-                    newView     = View(name, aclName, viewObj.otherConfig)
-                    views[name] = newView
+                self.orderExceptionHandler(e=e, viewObj=viewObj, views=views)
+
+    def orderExceptionHandler(self, *junk, e, viewObj, views):
+        """ Handler for order exception, to split the acl and the view.
+        """
+        nets = e.args[0]
+        oldAclName = viewObj.aclName    # get name befor split
+        oldAcl0, oldAcl1 = Acl.splitTree(nets)
+        self.acls.pop(oldAclName)       # remove the old name
+        self.acls[oldAcl0.name] = oldAcl0
+        self.acls[oldAcl1.name] = oldAcl1
+        for suffix, aclName in [('-0', oldAcl0.name), ('-1', oldAcl1.name)]:
+            name        = viewObj.name + suffix
+            newView     = View(name, aclName, viewObj.otherConfig)
+            views[name] = newView
 
     def insertView(self, newView):
         """ Find a good location in the self.outData, and
