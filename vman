@@ -71,6 +71,36 @@ def fixAcl(args):
     g.save(heads, newPath)
 
 
+def checkView(args):
+    """ Check if all views can be ordered, check the acl if required
+    """
+    checkAcl = True
+    paths    = []
+    state    = 0
+    while args:
+        arg = args.pop(0)
+        if arg == '--aclok':
+            checkAcl = False
+        else:
+            paths.append(arg)
+
+    assert len(paths) == 2, "wrong arguments"
+
+    def customHandler(*junk, e, viewObj, views):
+        print("order problem: %s" % viewObj.name, file=sys.stderr)
+        nonlocal state
+        state = 1
+
+    viewPath, aclPath = paths
+    ag = AclGroup()
+    ag.load(aclPath, remove_conflict=checkAcl)
+    vg = ViewGroup(acls=ag.data)
+    vg.orderExceptionHandler = customHandler
+    vg.load(viewPath)
+    vg.order()
+    exit(state)
+
+
 def help():
     bname = os.path.basename(sys.argv[0])
     text = """Usage:
