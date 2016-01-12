@@ -53,6 +53,24 @@ def checkAcl(args):
     g.load(path, remove_conflict=True)
 
 
+def fixAcl(args):
+    """ Load the acl database, remove redundant networks,
+    solve conflicts, then save the result to a new database.
+    """
+    verbose = 0
+    oldPath = newPath = None
+    try:
+        oldPath, newPath = args[:2]
+    except:
+        pass
+    assert oldPath != None and newPath != None, "expect two file paths"
+    assert os.path.realpath(oldPath) != os.path.realpath(oldPath), "two files are the same"
+    g = AclGroup()
+    g.load(oldPath, remove_conflict=True)
+    heads = [v for v in g.data.values() if not v.parent]
+    g.save(heads, newPath)
+
+
 def help():
     bname = os.path.basename(sys.argv[0])
     text = """Usage:
