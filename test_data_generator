@@ -23,8 +23,8 @@ def generate(args):
     vg = ViewGroup()
     vg.load(viewPath, resolveParts=False)
     acls   = ag.data
-    seq    = 0
     views  = [x for x in vg.data if x.name != 'ANY']
+    res    = {}
     for view in views:
         acl      = acls[view.aclName]
         networks = acl.networks()
@@ -32,11 +32,26 @@ def generate(args):
         for net in networks:
             firstIp = numToIp(net.firstInt)
             lastIp  = numToIp(net.lastInt)
-            out(seq, firstIp, viewName)
-            seq += 1
-            out(seq, lastIp, viewName)
-            seq += 1
+            maskLen = int(net.name.split('/')[-1])
+            addIp(firstIp, maskLen, viewName, res)
+            addIp(lastIp,  maskLen, viewName, res)
+    seq = 0
+    for ip, (mask, viewName) in res.items():
+        out(seq, ip, viewName)
+        seq += 1
 
+def addIp(ip, mask, viewName, group):
+    """ Add the ip and viewName to the group,
+    keep the one of a longer mask
+    """
+    if ip in group:         # added before
+        data = group[ip]
+        oldMask = data[0]
+        mask = max(oldMask, mask)
+        data[0] = mask
+    else:                   # first time add
+        data = [mask, viewName]
+    group[ip] = data
 
 def numToIp(number):
     """ Convert the number to an IPv4 address string
