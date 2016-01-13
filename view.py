@@ -133,8 +133,9 @@ class ViewGroup:
         self.acls = acls
 
     def load(self, dbFile, resolveParts=True):
-        """ Load data from a database, the existing data of the group
-        will be abandoned.
+        """ Load data from a database, the existing
+        data of the group will be abandoned. The
+        'ANY' view shall be separated from others.
         """
         self.data = []
         viewBlocks = self.preproc(dbFile)
@@ -150,8 +151,20 @@ class ViewGroup:
             otherConfig = parsed[1]
             view = View(view_name, aclName, otherConfig)
             self.addView(view)
+        self.separateDefaultView()
         if resolveParts:
             self.resolveViewsParts()
+
+    def separateDefaultView(self):
+        """ Separate the 'ANY' view from others.
+        """
+        x = [v for v in self.data if v.name.lower() == 'any']
+        if len(x):
+            defaultView = x[0]
+            self.defaultView = defaultView
+            self.data.remove(defaultView)
+        else:
+            self.defaultView = None
 
     def addView(self, view, validator=None, vpargs=(), vkargs={}):
         """ Add the view to the group. Duplicate name of view
@@ -236,7 +249,8 @@ class ViewGroup:
     def save(self, dbFile):
         """ Save the group data to a database file.
         Views with LESS acl shall be put in front of
-        the one which is GREATER.
+        the one which is GREATER. The default view to
+        the bottom.
         """
         ofile = open(dbFile, 'wb')
         for viewList in self.outData['ordered']:
@@ -244,6 +258,8 @@ class ViewGroup:
                 self.writeOneView(view, ofile)
         for view in self.outData['free']:
             self.writeOneView(view, ofile)
+        if self.defaultView is not None:
+            self.writeOneView(self.defaultView, ofile)
 
     def resolveViewsParts(self):
         """ Find out all views whose acl is missing (been
@@ -292,7 +308,10 @@ class ViewGroup:
         return newViews
 
     def order(self):
-        """ Sort all views in the group
+        """ Sort all views in the group, but not including
+        the 'ANY' view which is the default and shall not
+        be put together to sort, it shall always be the
+        last one in the view config database.
         """
         views = list(self.data)
         self.enforceRules(views)
