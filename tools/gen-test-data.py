@@ -7,9 +7,15 @@ Desc: Create a file containing mapping
       of IP and view for view testing.
 """
 
+import sys, os
+
+progPath = os.path.realpath(__file__)
+baseDir  = os.path.dirname(progPath)
+libDir   = os.path.dirname(baseDir)
+sys.path.insert(0, libDir)
+
 from acl import *
 from view import *
-import sys, os
 
 def generate(args):
     """ Check if all views can be ordered, check the acl if required
