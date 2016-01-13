@@ -411,8 +411,11 @@ class ViewGroup:
                 elif rela == Acl.GREATER:
                     lGroup = viewList[:lessLen]
                     gGroup = viewList[lessLen:]
+                    break
                 else:
                     lessLen += 1
+            else:
+                    lGroup = viewList[:lessLen]
             # at this point, all views in the lGroup are
             # LESS than the newView (its acl actually), but
             # in the gGroup, only the first of it is GREATER
