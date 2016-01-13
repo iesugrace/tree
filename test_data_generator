@@ -24,34 +24,29 @@ def generate(args):
     vg.load(viewPath, resolveParts=False)
     acls   = ag.data
     views  = [x for x in vg.data if x.name != 'ANY']
-    res    = {}
+
+    # collect the starting and ending IP
+    # numbers of all networks in the group
+    ipNums = []
     for view in views:
         acl      = acls[view.aclName]
         networks = acl.networks()
-        viewName = view.name
         for net in networks:
-            firstIp = numToIp(net.firstInt)
-            lastIp  = numToIp(net.lastInt)
-            maskLen = int(net.name.split('/')[-1])
-            addIp(firstIp, maskLen, viewName, res)
-            addIp(lastIp,  maskLen, viewName, res)
-    seq = 0
-    for ip, (mask, viewName) in res.items():
-        out(seq, ip, viewName)
-        seq += 1
+            ipNums.append(net.firstInt)
+            ipNums.append(net.lastInt)
 
-def addIp(ip, mask, viewName, group):
-    """ Add the ip and viewName to the group,
-    keep the one of a longer mask
-    """
-    if ip in group:         # added before
-        data = group[ip]
-        oldMask = data[0]
-        mask = max(oldMask, mask)
-        data[0] = mask
-    else:                   # first time add
-        data = [mask, viewName]
-    group[ip] = data
+    allNets = [x for x in ag.data.values() if isinstance(x, Network)]
+    seq = 0
+    for ipNum in ipNums:
+        coverNets = [x for x in allNets if x.firstInt <= ipNum <= x.lastInt]
+        k = lambda net: int(net.name.split('/')[-1])
+        coverNets.sort(key=k, reverse=True) # sort with netmask length
+        net = coverNets[0]                  # get the longest netmask one
+        topAcl = net.topParent()
+        aclName = topAcl.name
+        view = [x for x in vg.data if x.aclName == aclName][0]
+        out(seq, numToIp(ipNum), view.name)
+        seq += 1
 
 def numToIp(number):
     """ Convert the number to an IPv4 address string

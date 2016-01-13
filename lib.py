@@ -52,6 +52,14 @@ class Node:
             parent = parent.parent
         return res
 
+    def topParent(self):
+        """ Return the top parent of a node,
+        top parent is the one has no parent
+        """
+        parents = self.parents()
+        res = parents[-1] if len(parents) else None
+        return res
+
 
 class Leaf(Node): pass
 
