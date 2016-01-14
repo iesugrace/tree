@@ -146,18 +146,26 @@ def addNet(args):
     # and parts are not resolved at this point.
     vg = ViewGroup()
     vg.load(viewPath, resolveParts=False)
-    aclName = [x.aclName for x in vg.data if x.name == viewName][0]
+
+    # resolve the view name
+    viewName = resolveViewName(viewName, vg.data)
 
     # load acl database
     ag = AclGroup()
     ag.load(aclPath, remove_conflict=False)
 
     # add networks to the acl group
-    acl = ag.data[aclName]
+    aclName    = [x.aclName for x in vg.data if x.name == viewName][0]
+    acl        = ag.data[aclName]
+    addedCount = 0
     for netName in netNames:
-        net = Network(netName)
+        net = Network(netName, code=netName)
         if ag.addNetwork(net):
             acl.attachChild(net)
+            addedCount += 1
+    if not addedCount:
+        print("no network added, nothing changed")
+        exit(0)
     acl.removeRedundant()
     ag.removeConflicts()
 
@@ -170,6 +178,26 @@ def addNet(args):
     aclHeads = [v for k, v in vg.acls.items() if v.parent is None]
     AclGroup.save(aclHeads, aclPath)
     vg.save(viewPath)
+
+
+def resolveViewName(name, group):
+    """ The provided view from the command line
+    may had been split into parts before, here
+    we find and return one part that used to be
+    part of the original view, from the given
+    view group which is a list.
+    """
+    # the exact name exists, return it
+    if [x for x in group if x.name == name]:
+        return name
+
+    # not exists, found one of its parts
+    flag     = name + '-'
+    names    = [x.name for x in group if x.name.startswith(flag)]
+    if names:
+        return names[0]
+    else:
+        raise Exception("view not exists: %s" % name)
 
 
 def help():
