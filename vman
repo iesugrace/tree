@@ -137,36 +137,31 @@ def addNet(args):
     introduction of the new networks.
     """
     try:
-        viewPath, aclPath, viewName, *netNames = args
+        viewPath, aclPath, *viewArgs = args
+        argData = parseArgs(viewArgs)
     except:
         raise Exception("wrong arguments")
-    assert len(netNames) != 0, "wrong arguments"
+    assert len(argData) != 0, "wrong arguments"
 
     # load view database, no acls DB at this point,
     # and parts are not resolved at this point.
     vg = ViewGroup()
     vg.load(viewPath, resolveParts=False)
 
-    # resolve the view name
-    viewName = resolveViewName(viewName, vg.data)
-
     # load acl database
     ag = AclGroup()
     ag.load(aclPath, remove_conflict=False)
 
-    # add networks to the acl group
-    aclName    = [x.aclName for x in vg.data if x.name == viewName][0]
-    acl        = ag.data[aclName]
+    # add networks to views
     addedCount = 0
-    for netName in netNames:
-        net = Network(netName, code=netName)
-        if ag.addNetwork(net):
-            acl.attachChild(net)
-            addedCount += 1
+    for viewName, netNames in argData.items():
+        addedCount += processOneView(viewName, netNames, vg.data, ag)
+
     if not addedCount:
         print("no network added, nothing changed")
         exit(0)
-    acl.removeRedundant()
+
+    # solve acl conflicts
     ag.removeConflicts()
 
     # order the view data according to the new acl database
@@ -178,6 +173,23 @@ def addNet(args):
     aclHeads = [v for k, v in vg.acls.items() if v.parent is None]
     AclGroup.save(aclHeads, aclPath)
     vg.save(viewPath)
+
+
+def processOneView(viewName, netNames, views, aclGroup):
+    # resolve the view name
+    viewName = resolveViewName(viewName, views)
+
+    # add networks to the acl group
+    aclName    = [x.aclName for x in views if x.name == viewName][0]
+    acl        = aclGroup.data[aclName]
+    addedCount = 0
+    for netName in netNames:
+        net = Network(netName, code=netName)
+        if aclGroup.addNetwork(net):
+            acl.attachChild(net)
+            addedCount += 1
+    acl.removeRedundant()
+    return addedCount
 
 
 def resolveViewName(name, group):
