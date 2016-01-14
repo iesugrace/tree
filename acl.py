@@ -32,12 +32,11 @@ class Network(Leaf):
 
     def __init__(self, name):
         Leaf.__init__(self, name)
-        net_pattern  = '^([0-9]+\.){3}[0-9]+/[0-9]+$'
-        host_pattern = '^([0-9]+\.){3}[0-9]+$'
-        if re.match(host_pattern, name):
-            name = '%s/32' % name
-        elif not re.match(net_pattern, name):
-            raise InvalidNetworkException("unrecognized network: %s" % name)
+        pattern  = '^([0-9]+\.){3}[0-9]+/[0-9]+$'
+        if not re.match(pattern, name):
+            msg =  "invalid network: %s\n" % name
+            msg += "valid forms: 1.2.3.4/32, 1.2.3.0/24, ..."
+            raise InvalidNetworkException(msg)
         self.parseNetwork()
 
     def parseNetwork(self):
