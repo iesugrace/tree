@@ -212,21 +212,89 @@ def resolveViewName(name, group):
         raise Exception("view not exists: %s" % name)
 
 
-def help():
+def parseArgs(iData):
+    """ Parse the input argument data iData
+    which is a list of strings, return a
+    dictionary.
+    """
+    res = {}
+    for viewArg in iData:
+        viewName, networkList = viewArg.split(':')
+        netNames = networkList.split(',')
+        if not viewName or not netNames:
+            raise Exception
+        res[viewName] = netNames
+    return res
+
+
+def usage():
     bname = os.path.basename(sys.argv[0])
     text = """Usage:
-    %s check-acl [-v] <acl-file>
-    %s fix-acl <acl-file> <new-acl-file>
-    %s check-view [--aclok] <view-file> <acl-file>
-    %s fix-view [--aclok] <view-file> <acl-file> <new-view-file> <new-acl-file>
-    %s add-net <view-file> <acl-file> <view> <net>..."""
-    text = text % ((bname,) * 5)
+%s --help
+%s add-net <view-file> <acl-file> <view:net[,net]...> [view:net[,net]...]...
+%s check-acl [-v] <acl-file>
+%s fix-acl <acl-file> <new-acl-file>
+%s check-view [--aclok] <view-file> <acl-file>
+%s fix-view [--aclok] <view-file> <acl-file> <new-view-file> <new-acl-file>"""
+    text = text % ((bname,) * 6)
     print(text)
+
+
+def help():
+    """ Detailed help message
+    """
+    msg = """------- vman 命令使用方法举例 -------
+
+
+1. 添加网段到View 中
+
+   添加一个网段到一个View，view 和网段之间用冒号分隔
+    $ vman add-net view.conf acl.conf GD_CTC:1.1.1.0/24
+
+   添加多个网段到一个View，网段之间用逗号分隔
+    $ vman add-net view.conf acl.conf GD_CTC:1.1.1.0/24,2.2.2.0/24
+
+   添加多个网段到多个View，view 和view 之间用空格分隔
+    $ vman add-net view.conf acl.conf GD_CTC:1.1.1.0/24,2.2.2.0/24 CQ_CTC:3.3.3.0/24
+
+
+2. 检查Acl 文件是否有误
+    $ vman check-acl acl.conf
+
+    加上-v 参数可以看到更详细的信息
+    $ vman check-acl -v acl.conf
+
+
+3. 修复Acl 文件，生成新的正确的Acl 文件
+    $ vman fix-acl acl.conf new-acl.conf
+
+
+4. 检查View 文件是否有误
+   这个操作需要用到Acl 文件，所以需要一并提供Acl 文件的路径，
+   --aclok 参数表示Acl 文件已经修复过了，不需要再修复。
+
+   先修复Acl，再检查View，但是不会保存修复过的Acl。
+    $ vman check-view view.conf acl.conf
+
+   不修复Acl，直接检查View
+    $ vman check-view --aclok view.conf acl.conf
+
+
+5. 修复View 文件。 修复View 的过程中，根据需要，
+   有可能会修改Acl，所以本操作会生成新的View 和Acl 文件。
+
+   一步到位同时修复View 和Acl
+    $ vman fix-view view.conf acl.conf new-view.conf new-acl.conf
+
+   在修复好Acl 的基础之上修复View
+    $ vman fix-view --aclok view.conf acl.conf new-view.conf new-acl.conf"""
+    usage()
+    print('\n\n', msg, sep='')
 
 
 if __name__ == '__main__':
     if len(sys.argv) < 2:
-        help()
+        usage()
         exit(1)
     cmd  = sys.argv[1]
     args = sys.argv[2:]
@@ -241,20 +309,23 @@ if __name__ == '__main__':
             fixView(args)
         elif cmd == "add-net":
             addNet(args)
+        elif cmd == "--help":
+            help()
+            exit(0)
         else:
             print("unrecognized command: %s" % cmd, file=sys.stderr)
-            help()
+            usage()
             exit(1)
     except AssertionError as e:
         print(e, file=sys.stderr)
-        help()
+        usage()
         exit(1)
     except Exception as e:
         text = str(e).split('] ')[-1]
         if not text:
             text = '-- no error message --'
         print(text, file=sys.stderr)
-        help()
+        usage()
         exit(1)
     except KeyboardInterrupt:
         exit(1)
