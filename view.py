@@ -68,7 +68,7 @@ class ViewGroup:
         view2 -- acl2 -- {192.168.1.0/24; 10.1.0.0/16;}
 
         view2 MUST be placed in front of view1 in the
-        database, because acl2 is LESS that acl1.
+        database, because acl2 is LESS than acl1.
 
     But the relationship may be more complex when these
     three are putting together in the same view database:
